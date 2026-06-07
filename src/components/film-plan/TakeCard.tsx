@@ -52,9 +52,9 @@ export function TakeCard({
         event.preventDefault();
         onDrop();
       }}
-      className="overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-sm transition hover:shadow-lg hover:shadow-zinc-950/5"
+      className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm transition hover:shadow-lg hover:shadow-zinc-950/5 sm:rounded-3xl"
     >
-      <div className="flex items-center gap-3 border-b border-zinc-100 bg-zinc-50/80 px-4 py-3">
+      <div className="flex flex-wrap items-center gap-2 border-b border-zinc-100 bg-zinc-50/80 px-3 py-3 sm:flex-nowrap sm:gap-3 sm:px-4">
         <span
           draggable
           data-testid={`drag-take-${take.id}`}
@@ -63,7 +63,7 @@ export function TakeCard({
             event.dataTransfer.setData("text/plain", take.id);
             onDragStart();
           }}
-          className="grid h-9 w-7 shrink-0 cursor-grab place-items-center rounded-lg text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 active:cursor-grabbing"
+          className="hidden h-9 w-7 shrink-0 cursor-grab place-items-center rounded-lg text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 active:cursor-grabbing sm:grid"
           title="Arrastar take"
           aria-label={`Arrastar ${take.title}`}
         >
@@ -72,7 +72,7 @@ export function TakeCard({
         <span className="grid h-8 w-8 place-items-center rounded-lg bg-zinc-950 text-xs font-semibold text-white">
           {String(index + 1).padStart(2, "0")}
         </span>
-        <TextInput value={take.title} onChange={(event) => patch({ title: event.target.value })} className="border-0 bg-transparent px-0 text-base font-semibold focus:ring-0" />
+        <TextInput value={take.title} onChange={(event) => patch({ title: event.target.value })} className="order-last basis-full border-0 bg-transparent px-0 text-base font-semibold focus:ring-0 sm:order-none sm:basis-auto" />
         <button type="button" onClick={onMoveUp} disabled={!canMoveUp} aria-label={`Mover ${take.title} para cima`} title="Mover para cima" className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 disabled:pointer-events-none disabled:opacity-30">
           <ArrowUp size={16} />
         </button>
@@ -106,7 +106,7 @@ export function TakeCard({
         </div>
       )}
 
-      <div className="p-4 sm:p-5">
+      <div className="p-3 sm:p-5">
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <Field label="Horário"><TextInput type="time" value={take.time} onChange={(event) => patch({ time: event.target.value })} /></Field>
           <Field label="Local"><TextInput value={take.location} placeholder="Calçadão, estúdio..." onChange={(event) => patch({ location: event.target.value })} /></Field>

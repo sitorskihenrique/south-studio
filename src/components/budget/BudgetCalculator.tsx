@@ -143,7 +143,7 @@ export function BudgetCalculator() {
 
   return (
     <section className="h-full overflow-y-auto">
-      <div className="mx-auto max-w-[1340px] px-4 py-6 sm:px-7 lg:px-8 lg:py-8">
+      <div className="mx-auto max-w-[1340px] px-3 py-5 sm:px-7 lg:px-8 lg:py-8">
         <header className="mb-6">
           <div className="flex flex-col justify-between gap-5 xl:flex-row xl:items-end">
             <div>
@@ -200,8 +200,8 @@ export function BudgetCalculator() {
               saveStatus={saveStatus}
               updateBudget={updateBudget}
             />
-            <div className="mt-5 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
-              <main className="order-2 space-y-5 lg:order-1">
+            <div className="mt-5 grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
+              <main className="order-2 space-y-5 xl:order-1">
                 <ClientCard budget={budget} updateBudget={updateBudget} />
                 <BriefingCard budget={budget} updateBudget={updateBudget} />
 

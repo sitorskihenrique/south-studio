@@ -30,9 +30,9 @@
   ],
   "shortcuts": [
     {
-      "name": "Teleprompter",
-      "short_name": "Teleprompter",
-      "url": "/teleprompter",
+      "name": "Tarefas",
+      "short_name": "Tarefas",
+      "url": "/tarefas",
       "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
     },
     {

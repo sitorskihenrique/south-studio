@@ -101,7 +101,7 @@ export function FilmPlanTool() {
 
   return (
     <section className="h-full overflow-y-auto">
-      <div className="mx-auto max-w-[1400px] px-4 py-6 sm:px-7 lg:px-8 lg:py-8">
+      <div className="mx-auto max-w-[1400px] px-3 py-5 sm:px-7 lg:px-8 lg:py-8">
         <header>
           <div className="flex flex-col justify-between gap-5 xl:flex-row xl:items-end">
             <div><div className="mb-3 inline-flex items-center gap-2 rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-xs font-semibold text-violet-700"><Sparkles size={14} />Direção e produção integradas</div><h1 className="text-3xl font-semibold tracking-tight text-zinc-950 sm:text-4xl">Plano de Filmagem</h1><p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-600 sm:text-base">Ordem do dia, shotlist, referências, cronograma e checklist de takes em uma única experiência.</p></div>

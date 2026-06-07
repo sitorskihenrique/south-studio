@@ -40,7 +40,7 @@ export function SequenceBoard({
   }
 
   return (
-    <section className="rounded-3xl border border-zinc-200 bg-zinc-100/65 p-3 sm:p-4">
+    <section className="rounded-2xl border border-zinc-200 bg-zinc-100/65 p-2 sm:rounded-3xl sm:p-4">
       <div className="mb-4 grid gap-3 rounded-2xl bg-white p-4 shadow-sm sm:grid-cols-[1fr_1.5fr_auto] sm:items-start">
         <TextInput value={sequence.title} onChange={(event) => onChange({ ...sequence, title: event.target.value })} className="text-base font-semibold" />
         <TextArea value={sequence.notes} placeholder="Objetivo, contexto ou observações da sequência" className="min-h-11 py-2" onChange={(event) => onChange({ ...sequence, notes: event.target.value })} />

@@ -10,7 +10,7 @@ export function BudgetSummary({ budget, totals }: { budget: BudgetState; totals:
     budget.client.budget > 0 ? Math.min((totals.finalValue / budget.client.budget) * 100, 100) : 0;
 
   return (
-    <aside className="order-1 space-y-4 lg:order-2 lg:sticky lg:top-6">
+    <aside className="order-1 space-y-4 xl:order-2 xl:sticky xl:top-6">
       <div className="overflow-hidden rounded-3xl bg-zinc-950 p-5 text-white shadow-xl shadow-zinc-950/15">
         <div className="flex items-center gap-3">
           <span className="grid h-11 w-11 place-items-center rounded-2xl bg-violet-500 text-white">

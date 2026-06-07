@@ -14,11 +14,16 @@
 
 html {
   scroll-behavior: smooth;
+  min-height: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 body {
-  min-height: 100vh;
+  min-height: 100dvh;
+  max-width: 100%;
   margin: 0;
+  overflow-x: hidden;
   background:
     radial-gradient(circle at 18% 10%, rgba(148, 163, 184, 0.18), transparent 32%),
     linear-gradient(135deg, #fbfbfd 0%, #f1f5f9 44%, #eef2f7 100%);
@@ -55,10 +60,18 @@ select {
 
   input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
   select {
-    min-height: 44px;
+    min-height: 48px;
   }
 }
 
 ::selection {
   background: rgba(20, 184, 166, 0.22);
+}
+
+.hide-scrollbar {
+  scrollbar-width: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
 }

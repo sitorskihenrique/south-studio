@@ -16,7 +16,7 @@ export function PlanSection({
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-3xl border border-zinc-200/80 bg-white/86 p-5 shadow-sm sm:p-6">
+    <section className="rounded-2xl border border-zinc-200/80 bg-white/86 p-4 shadow-sm sm:rounded-3xl sm:p-6">
       <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-700">{eyebrow}</p>
@@ -29,4 +29,3 @@ export function PlanSection({
     </section>
   );
 }
-
