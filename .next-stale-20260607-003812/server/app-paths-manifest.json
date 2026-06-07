@@ -1,0 +1,8 @@
+{
+  "/_not-found/page": "app/_not-found/page.js",
+  "/plano-de-filmagem/page": "app/plano-de-filmagem/page.js",
+  "/page": "app/page.js",
+  "/calculadora/page": "app/calculadora/page.js",
+  "/ordem-do-dia/page": "app/ordem-do-dia/page.js",
+  "/teleprompter/page": "app/teleprompter/page.js"
+}

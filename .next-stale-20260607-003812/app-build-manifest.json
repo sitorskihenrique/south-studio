@@ -1,0 +1,68 @@
+{
+  "pages": {
+    "/_not-found/page": [
+      "static/chunks/webpack-c5e40066def993c3.js",
+      "static/chunks/3976b0ab-055d140fdee61247.js",
+      "static/chunks/328-fdbd70c3e4f4f7d5.js",
+      "static/chunks/main-app-8c59993ac3ac9647.js",
+      "static/chunks/app/_not-found/page-feaa8af8834cfd99.js"
+    ],
+    "/not-found": [
+      "static/chunks/webpack-c5e40066def993c3.js",
+      "static/chunks/3976b0ab-055d140fdee61247.js",
+      "static/chunks/328-fdbd70c3e4f4f7d5.js",
+      "static/chunks/main-app-8c59993ac3ac9647.js",
+      "static/chunks/498-064c0c4a330d884c.js",
+      "static/chunks/app/not-found-dc43ee6a3ea3daa6.js"
+    ],
+    "/layout": [
+      "static/chunks/webpack-c5e40066def993c3.js",
+      "static/chunks/3976b0ab-055d140fdee61247.js",
+      "static/chunks/328-fdbd70c3e4f4f7d5.js",
+      "static/chunks/main-app-8c59993ac3ac9647.js",
+      "static/css/28ee4f0a80cb7923.css",
+      "static/chunks/app/layout-ec7f81af2e59c8a4.js"
+    ],
+    "/plano-de-filmagem/page": [
+      "static/chunks/webpack-c5e40066def993c3.js",
+      "static/chunks/3976b0ab-055d140fdee61247.js",
+      "static/chunks/328-fdbd70c3e4f4f7d5.js",
+      "static/chunks/main-app-8c59993ac3ac9647.js",
+      "static/chunks/498-064c0c4a330d884c.js",
+      "static/chunks/911-b0d889abee7a1087.js",
+      "static/chunks/app/plano-de-filmagem/page-4eb93da4623098c1.js"
+    ],
+    "/page": [
+      "static/chunks/webpack-c5e40066def993c3.js",
+      "static/chunks/3976b0ab-055d140fdee61247.js",
+      "static/chunks/328-fdbd70c3e4f4f7d5.js",
+      "static/chunks/main-app-8c59993ac3ac9647.js",
+      "static/chunks/498-064c0c4a330d884c.js",
+      "static/chunks/app/page-66bd5117e9e72454.js"
+    ],
+    "/calculadora/page": [
+      "static/chunks/webpack-c5e40066def993c3.js",
+      "static/chunks/3976b0ab-055d140fdee61247.js",
+      "static/chunks/328-fdbd70c3e4f4f7d5.js",
+      "static/chunks/main-app-8c59993ac3ac9647.js",
+      "static/chunks/498-064c0c4a330d884c.js",
+      "static/chunks/911-b0d889abee7a1087.js",
+      "static/chunks/app/calculadora/page-c35ce0e59a62159d.js"
+    ],
+    "/ordem-do-dia/page": [
+      "static/chunks/webpack-c5e40066def993c3.js",
+      "static/chunks/3976b0ab-055d140fdee61247.js",
+      "static/chunks/328-fdbd70c3e4f4f7d5.js",
+      "static/chunks/main-app-8c59993ac3ac9647.js",
+      "static/chunks/app/ordem-do-dia/page-feaa8af8834cfd99.js"
+    ],
+    "/teleprompter/page": [
+      "static/chunks/webpack-c5e40066def993c3.js",
+      "static/chunks/3976b0ab-055d140fdee61247.js",
+      "static/chunks/328-fdbd70c3e4f4f7d5.js",
+      "static/chunks/main-app-8c59993ac3ac9647.js",
+      "static/chunks/498-064c0c4a330d884c.js",
+      "static/chunks/app/teleprompter/page-e7077f28dcb15a6a.js"
+    ]
+  }
+}
