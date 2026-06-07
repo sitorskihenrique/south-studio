@@ -6,6 +6,7 @@ import { emptyTaskDraft, defaultTasks } from "@/lib/tasks/defaults";
 import { filterTasks, getTodayTaskDay, taskSummary } from "@/lib/tasks/filters";
 import { readTasks, writeTasks } from "@/lib/tasks/storage";
 import { taskDays, taskStatuses, type StudioTask, type TaskDay, type TaskDayFilter, type TaskDraft, type TaskStatusFilter } from "@/lib/tasks/types";
+import { readCloudItems, replaceCloudItems } from "@/lib/supabase/data";
 import { TaskCard } from "./TaskCard";
 import { TaskFormSheet } from "./TaskFormSheet";
 import { TaskSummary } from "./TaskSummary";
@@ -21,9 +22,24 @@ export function TaskTool() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<TaskDraft>({ ...emptyTaskDraft, day: "Segunda" });
   const [message, setMessage] = useState("");
+  const [storageLabel, setStorageLabel] = useState("Fallback local");
 
   useEffect(() => {
-    setTasks(readTasks());
+    let mounted = true;
+    const localTasks = readTasks();
+    setTasks(localTasks);
+
+    readCloudItems<StudioTask>("tasks").then((result) => {
+      if (!mounted) return;
+      if (!result.authenticated) {
+        setStorageLabel("Fallback local");
+        return;
+      }
+      setStorageLabel(result.ok ? "Sincronizado com Supabase" : "Fallback local ativo");
+      if (result.ok && result.items.length) setTasks(result.items);
+    });
+
+    return () => { mounted = false; };
   }, []);
 
   const visibleTasks = useMemo(() => filterTasks(tasks, selectedDay, status, search), [search, selectedDay, status, tasks]);
@@ -31,7 +47,14 @@ export function TaskTool() {
 
   function persist(next: StudioTask[], successMessage: string) {
     setTasks(next);
-    setMessage(writeTasks(next) ? successMessage : "Não foi possível salvar as alterações neste navegador.");
+    const ok = writeTasks(next);
+    setMessage(ok ? successMessage : "Não foi possível salvar as alterações neste navegador.");
+
+    replaceCloudItems("tasks", next, (task) => task.title || "Tarefa").then((result) => {
+      if (!result.authenticated) return;
+      setStorageLabel(result.ok ? "Sincronizado com Supabase" : "Fallback local ativo");
+      if (!result.ok) setMessage(`${successMessage} Salvo localmente; sincronização pendente.`);
+    });
   }
 
   function openNewTask() {
@@ -49,7 +72,9 @@ export function TaskTool() {
 
   function submitTask() {
     const title = draft.title.trim();
-    if (!title) return;
+    if (!title) return setMessage("Digite um título para a tarefa.");
+    if (title.length > 140) return setMessage("Use um título com até 140 caracteres.");
+
     if (editingId) {
       persist(tasks.map((task) => task.id === editingId ? { ...task, ...draft, title } : task), "Tarefa atualizada.");
     } else {
@@ -89,6 +114,7 @@ export function TaskTool() {
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-teal-700">Semana em movimento</p>
             <h1 className="mt-2 text-3xl font-semibold tracking-tight text-zinc-950 sm:text-4xl">Tarefas</h1>
             <p className="mt-2 text-sm leading-6 text-zinc-500">{summary.todo} a fazer, {summary.progress} em progresso e {summary.completed} concluídas.</p>
+            <p className="mt-1 text-xs font-medium text-zinc-400">{storageLabel}</p>
           </div>
           <button type="button" onClick={openNewTask} className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-zinc-950 px-5 text-sm font-semibold text-white shadow-lg shadow-zinc-950/15 sm:w-fit">
             <Plus size={18} />Nova tarefa

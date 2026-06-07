@@ -7,12 +7,18 @@ import { defaultTasks } from "@/lib/tasks/defaults";
 import { formatMinutes, getEstimatedMinutes, getTodayTaskDay } from "@/lib/tasks/filters";
 import { readTasks, tasksUpdatedEvent } from "@/lib/tasks/storage";
 import { taskDays, type StudioTask } from "@/lib/tasks/types";
+import { readCloudItems } from "@/lib/supabase/data";
 
 export function DashboardTasks() {
   const [tasks, setTasks] = useState<StudioTask[]>(defaultTasks);
 
   useEffect(() => {
-    const sync = () => setTasks(readTasks());
+    const sync = () => {
+      setTasks(readTasks());
+      readCloudItems<StudioTask>("tasks").then((result) => {
+        if (result.authenticated && result.ok && result.items.length) setTasks(result.items);
+      });
+    };
     sync();
     window.addEventListener(tasksUpdatedEvent, sync);
     window.addEventListener("storage", sync);

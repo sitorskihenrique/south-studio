@@ -6,6 +6,7 @@ import { Field, TextArea, TextInput } from "@/components/budget/BudgetFields";
 import { createDefaultFilmPlan, createFilmDay, createScriptBlock, createSequence } from "@/lib/film-plan/defaults";
 import { filmPlanDraftKey, readFilmPlanStorage, savedFilmPlansKey, toSavedFilmPlan, upsertFilmPlan, writeFilmPlanStorage } from "@/lib/film-plan/storage";
 import type { FilmDay, FilmPlan, SavedFilmPlan, ScriptBlock, Sequence } from "@/lib/film-plan/types";
+import { deleteCloudItem, readCloudItems, upsertCloudItem } from "@/lib/supabase/data";
 import { FilmPlanSummary } from "./FilmPlanSummary";
 import { PlanSection } from "./PlanSection";
 import { SavedFilmPlansView } from "./SavedFilmPlansView";
@@ -21,14 +22,26 @@ export function FilmPlanTool() {
   const [ready, setReady] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [message, setMessage] = useState("Rascunho salvo localmente");
+  const [storageLabel, setStorageLabel] = useState("Fallback local");
 
   const activeDay = useMemo(() => plan.days.find((day) => day.id === plan.activeDayId) || plan.days[0], [plan]);
 
   useEffect(() => {
+    let mounted = true;
     const draft = readFilmPlanStorage<Partial<FilmPlan> | null>(filmPlanDraftKey, null);
     if (draft) setPlan(normalizePlan(draft));
     setSavedPlans(readFilmPlanStorage<SavedFilmPlan[]>(savedFilmPlansKey, []));
     setReady(true);
+    readCloudItems<SavedFilmPlan>("film_plans").then((result) => {
+      if (!mounted) return;
+      if (!result.authenticated) {
+        setStorageLabel("Fallback local");
+        return;
+      }
+      setStorageLabel(result.ok ? "Sincronizado com Supabase" : "Fallback local ativo");
+      if (result.ok && result.items.length) setSavedPlans(result.items);
+    });
+    return () => { mounted = false; };
   }, []);
 
   useEffect(() => {
@@ -58,7 +71,7 @@ export function FilmPlanTool() {
     setView("editor");
   }
 
-  function savePlan() {
+  async function savePlan() {
     const saved = toSavedFilmPlan(plan);
     const next = upsertFilmPlan(savedPlans, saved);
     const ok = writeFilmPlanStorage(savedFilmPlansKey, next);
@@ -69,19 +82,23 @@ export function FilmPlanTool() {
     setSavedPlans(next);
     setPlan(saved.plan);
     writeFilmPlanStorage(filmPlanDraftKey, saved.plan);
+    const cloud = await upsertCloudItem("film_plans", saved, saved.projectName);
+    if (cloud.authenticated) setStorageLabel(cloud.ok ? "Sincronizado com Supabase" : "Fallback local ativo");
     setDirty(false);
-    setMessage("Plano de filmagem salvo com sucesso.");
+    setMessage(cloud.authenticated && cloud.ok ? "Plano salvo na sua conta." : "Plano salvo localmente.");
   }
 
-  function duplicate(source = plan) {
+  async function duplicate(source = plan) {
     const copy = normalizePlan({ ...source, id: crypto.randomUUID(), projectName: `Cópia de ${source.projectName}`, createdAt: "", updatedAt: "" });
     const saved = toSavedFilmPlan(copy);
     const next = upsertFilmPlan(savedPlans, saved);
     if (!writeFilmPlanStorage(savedFilmPlansKey, next)) return setMessage("Não foi possível duplicar. O armazenamento local pode estar cheio.");
     setSavedPlans(next);
     setPlan(saved.plan);
+    const cloud = await upsertCloudItem("film_plans", saved, saved.projectName);
+    if (cloud.authenticated) setStorageLabel(cloud.ok ? "Sincronizado com Supabase" : "Fallback local ativo");
     setDirty(false);
-    setMessage("Plano duplicado com sucesso.");
+    setMessage(cloud.authenticated && cloud.ok ? "Plano duplicado na sua conta." : "Plano duplicado localmente.");
     setView("editor");
   }
 
@@ -92,11 +109,13 @@ export function FilmPlanTool() {
     setView("editor");
   }
 
-  function deleteSaved(saved: SavedFilmPlan) {
+  async function deleteSaved(saved: SavedFilmPlan) {
     if (!window.confirm("Tem certeza que deseja excluir este plano de filmagem?")) return;
     const next = savedPlans.filter((item) => item.id !== saved.id);
     setSavedPlans(next);
     writeFilmPlanStorage(savedFilmPlansKey, next);
+    const cloud = await deleteCloudItem("film_plans", saved.id);
+    if (cloud.authenticated) setStorageLabel(cloud.ok ? "Sincronizado com Supabase" : "Fallback local ativo");
   }
 
   return (
@@ -112,7 +131,7 @@ export function FilmPlanTool() {
 
         {view === "saved" ? <div className="mt-6"><SavedFilmPlansView plans={savedPlans} onOpen={openSaved} onDuplicate={(saved) => duplicate(saved.plan)} onDelete={deleteSaved} /></div> : (
           <div className="mt-5">
-            <div className="mb-5 rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-xs font-medium text-zinc-500">{message}</div>
+            <div className="mb-5 rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-xs font-medium text-zinc-500">{message} · {storageLabel}</div>
             <DaySelector plan={plan} update={update} />
             {view === "timeline" ? <div className="mt-5"><TimelineView day={activeDay} /></div> : (
               <div className="mt-5 grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">

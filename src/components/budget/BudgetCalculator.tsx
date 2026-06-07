@@ -12,6 +12,7 @@ import {
   upsertSavedBudget,
   writeLocalStorage,
 } from "@/lib/budget/storage";
+import { deleteCloudItem, readCloudItems, upsertCloudItem } from "@/lib/supabase/data";
 import type { BudgetSectionKey, BudgetState, BudgetStatus, SavedBudget } from "@/lib/budget/types";
 import { BudgetSection, Field, NumberInput, SelectInput, TextArea, TextInput } from "./BudgetFields";
 import { BudgetSummary } from "./BudgetSummary";
@@ -26,14 +27,26 @@ export function BudgetCalculator() {
   const [ready, setReady] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [saveStatus, setSaveStatus] = useState("Rascunho salvo localmente");
+  const [storageLabel, setStorageLabel] = useState("Fallback local");
   const totals = useMemo(() => calculateBudget(budget), [budget]);
 
   useEffect(() => {
+    let mounted = true;
     const draft = readLocalStorage<Partial<BudgetState> | null>(draftStorageKey, null);
     const saved = readLocalStorage<SavedBudget[]>(savedBudgetsStorageKey, []);
     if (draft) setBudget(normalizeBudget(draft));
     setSavedBudgets(saved);
     setReady(true);
+    readCloudItems<SavedBudget>("budgets").then((result) => {
+      if (!mounted) return;
+      if (!result.authenticated) {
+        setStorageLabel("Fallback local");
+        return;
+      }
+      setStorageLabel(result.ok ? "Sincronizado com Supabase" : "Fallback local ativo");
+      if (result.ok && result.items.length) setSavedBudgets(result.items);
+    });
+    return () => { mounted = false; };
   }, []);
 
   useEffect(() => {
@@ -85,18 +98,20 @@ export function BudgetCalculator() {
     }));
   }
 
-  function saveNow() {
+  async function saveNow() {
     const saved = createSavedBudget(budget, totals);
     const next = upsertSavedBudget(savedBudgets, saved);
     setSavedBudgets(next);
     setBudget(saved.budget);
     writeLocalStorage(savedBudgetsStorageKey, next);
     writeLocalStorage(draftStorageKey, saved.budget);
+    const cloud = await upsertCloudItem("budgets", saved, saved.projectName);
+    if (cloud.authenticated) setStorageLabel(cloud.ok ? "Sincronizado com Supabase" : "Fallback local ativo");
     setDirty(false);
-    setSaveStatus("Orçamento salvo com sucesso.");
+    setSaveStatus(cloud.authenticated && cloud.ok ? "Orçamento salvo na sua conta." : "Orçamento salvo localmente.");
   }
 
-  function saveAsNew(source = budget) {
+  async function saveAsNew(source = budget) {
     const copy = normalizeBudget({
       ...source,
       id: crypto.randomUUID(),
@@ -111,8 +126,10 @@ export function BudgetCalculator() {
     setBudget(saved.budget);
     writeLocalStorage(savedBudgetsStorageKey, next);
     writeLocalStorage(draftStorageKey, saved.budget);
+    const cloud = await upsertCloudItem("budgets", saved, saved.projectName);
+    if (cloud.authenticated) setStorageLabel(cloud.ok ? "Sincronizado com Supabase" : "Fallback local ativo");
     setDirty(false);
-    setSaveStatus("Orçamento salvo como novo.");
+    setSaveStatus(cloud.authenticated && cloud.ok ? "Orçamento salvo como novo na sua conta." : "Orçamento salvo como novo localmente.");
     setActiveTab("create");
   }
 
@@ -123,19 +140,23 @@ export function BudgetCalculator() {
     setActiveTab("create");
   }
 
-  function deleteSaved(item: SavedBudget) {
+  async function deleteSaved(item: SavedBudget) {
     if (!window.confirm("Tem certeza que deseja excluir este orçamento?")) return;
     const next = savedBudgets.filter((budgetItem) => budgetItem.id !== item.id);
     setSavedBudgets(next);
     writeLocalStorage(savedBudgetsStorageKey, next);
+    const cloud = await deleteCloudItem("budgets", item.id);
+    if (cloud.authenticated) setStorageLabel(cloud.ok ? "Sincronizado com Supabase" : "Fallback local ativo");
   }
 
-  function changeSavedStatus(item: SavedBudget, status: BudgetStatus) {
+  async function changeSavedStatus(item: SavedBudget, status: BudgetStatus) {
     const updatedBudget = { ...item.budget, status, updatedAt: new Date().toISOString() };
     const updated = createSavedBudget(updatedBudget, calculateBudget(updatedBudget));
     const next = upsertSavedBudget(savedBudgets, updated);
     setSavedBudgets(next);
     writeLocalStorage(savedBudgetsStorageKey, next);
+    const cloud = await upsertCloudItem("budgets", updated, updated.projectName);
+    if (cloud.authenticated) setStorageLabel(cloud.ok ? "Sincronizado com Supabase" : "Fallback local ativo");
     if (budget.id === item.id) setBudget(updated.budget);
   }
 
@@ -198,6 +219,7 @@ export function BudgetCalculator() {
               budget={budget}
               isSaved={isSaved}
               saveStatus={saveStatus}
+              storageLabel={storageLabel}
               updateBudget={updateBudget}
             />
             <div className="mt-5 grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
@@ -236,7 +258,7 @@ export function BudgetCalculator() {
                     ID do orçamento:{" "}
                     <span className="font-semibold text-zinc-700">{budget.id.slice(0, 8)}</span>
                   </p>
-                  <p className="text-xs text-zinc-400">Dados armazenados somente neste navegador.</p>
+                  <p className="text-xs text-zinc-400">{storageLabel}</p>
                 </div>
               </main>
               <BudgetSummary budget={budget} totals={totals} />
@@ -252,11 +274,13 @@ function EditingHeader({
   budget,
   isSaved,
   saveStatus,
+  storageLabel,
   updateBudget,
 }: {
   budget: BudgetState;
   isSaved: boolean;
   saveStatus: string;
+  storageLabel: string;
   updateBudget: (updater: (current: BudgetState) => BudgetState) => void;
 }) {
   return (
@@ -286,6 +310,7 @@ function EditingHeader({
       </Field>
       <div className="sm:col-span-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-zinc-400">
         <span>{saveStatus}</span>
+        <span>{storageLabel}</span>
         {budget.createdAt && <span>Criado em {formatDate(budget.createdAt)}</span>}
         {budget.updatedAt && <span>Última alteração {formatDate(budget.updatedAt)}</span>}
       </div>
