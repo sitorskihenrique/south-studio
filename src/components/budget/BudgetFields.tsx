@@ -19,7 +19,7 @@ export function BudgetSection({
     <section className="studio-card rounded-[28px] p-4 sm:p-6">
       <div className="mb-6 flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-teal-700">
+          <p className="text-xs font-semibold uppercase text-zinc-500">
             {eyebrow}
           </p>
           <h2 className="mt-2 text-xl font-semibold tracking-tight text-zinc-950">{title}</h2>

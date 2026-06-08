@@ -121,9 +121,9 @@ export function FilmPlanTool() {
   return (
     <section className="h-full overflow-y-auto">
       <div className="mx-auto max-w-[1400px] px-4 py-5 sm:px-8 lg:px-10 lg:py-9 fade-in">
-        <header className="rounded-[32px] bg-zinc-950 p-6 text-white shadow-2xl shadow-zinc-950/18 sm:p-8">
+        <header className="studio-card rounded-[32px] p-6 sm:p-8">
           <div className="flex flex-col justify-between gap-6 xl:flex-row xl:items-end">
-            <div><div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/8 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-white/58"><Sparkles size={14} />Direção visual</div><h1 className="text-4xl font-semibold tracking-tight sm:text-6xl">Plano de Filmagem</h1><p className="mt-4 max-w-2xl text-sm leading-6 text-white/62 sm:text-base">Shotlist, referências, timeline e checklist de takes em uma experiência de set.</p></div>
+            <div><div className="mb-4 inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-semibold uppercase text-zinc-500"><Sparkles size={14} />Direção visual</div><h1 className="text-4xl font-semibold text-zinc-950 sm:text-6xl">Plano de Filmagem</h1><p className="mt-4 max-w-2xl text-sm leading-6 text-zinc-500 sm:text-base">Shotlist, referências, timeline e checklist de takes em uma experiência de set.</p></div>
             {view !== "saved" && <div className="flex flex-wrap gap-2"><Action icon={CalendarPlus} label="Novo plano" onClick={newPlan} /><Action icon={Save} label="Salvar plano" onClick={savePlan} primary /><Action icon={Copy} label="Duplicar" onClick={() => duplicate()} /></div>}
           </div>
           <div className="mt-6 flex w-full gap-1 overflow-x-auto rounded-2xl border border-zinc-200 bg-white p-1 sm:w-fit"><Tab icon={Film} label="Editor" active={view === "editor"} onClick={() => setView("editor")} /><Tab icon={LayoutList} label="Timeline" active={view === "timeline"} onClick={() => setView("timeline")} /><Tab icon={LayoutList} label={`Planos (${savedPlans.length})`} active={view === "saved"} onClick={() => setView("saved")} /></div>
@@ -178,7 +178,7 @@ function normalizePlan(stored: Partial<FilmPlan>): FilmPlan {
 }
 
 function Action({ icon: Icon, label, onClick, primary }: { icon: typeof Save; label: string; onClick: () => void; primary?: boolean }) {
-  return <button type="button" onClick={onClick} className={`inline-flex h-11 items-center justify-center gap-2 rounded-full px-4 text-sm font-semibold transition ${primary ? "bg-white text-zinc-950 shadow-lg shadow-zinc-950/15 hover:bg-zinc-200" : "border border-white/14 bg-white/8 text-white hover:bg-white/14"}`}><Icon size={17} />{label}</button>;
+  return <button type="button" onClick={onClick} className={`inline-flex h-11 items-center justify-center gap-2 rounded-full px-4 text-sm font-semibold transition ${primary ? "bg-zinc-950 text-white hover:bg-zinc-800" : "border border-zinc-200 bg-white text-zinc-700 hover:border-zinc-950 hover:text-zinc-950"}`}><Icon size={17} />{label}</button>;
 }
 function Tab({ icon: Icon, label, active, onClick }: { icon: typeof Film; label: string; active: boolean; onClick: () => void }) {
   return <button type="button" onClick={onClick} className={`inline-flex min-h-11 min-w-fit items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold transition ${active ? "bg-zinc-950 text-white" : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900"}`}><Icon size={17} />{label}</button>;

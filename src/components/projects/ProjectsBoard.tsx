@@ -102,12 +102,11 @@ export function ProjectsBoard() {
   return (
     <section className="h-full overflow-y-auto">
       <div className="mx-auto max-w-[1380px] px-4 py-5 sm:px-8 lg:px-10 lg:py-9 fade-in">
-        <header className="relative overflow-hidden rounded-[32px] bg-zinc-950 p-6 text-white shadow-2xl shadow-zinc-950/18 sm:p-8 lg:p-10">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_82%_18%,rgba(255,255,255,0.22),transparent_24%),linear-gradient(135deg,rgba(20,20,20,0),rgba(120,113,108,0.32))]" />
-          <div className="relative max-w-4xl">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/48">Projetos</p>
-            <h1 className="mt-5 text-4xl font-semibold tracking-tight sm:text-6xl">Toda produção por cliente.</h1>
-            <p className="mt-5 max-w-2xl text-base leading-7 text-white/62">Status, prazo, tarefas, orçamento e plano em uma visão clara para execução.</p>
+        <header className="studio-card rounded-[32px] p-6 sm:p-8 lg:p-10">
+          <div className="max-w-4xl">
+            <p className="text-xs font-semibold uppercase text-zinc-500">Projetos</p>
+            <h1 className="mt-5 text-4xl font-semibold text-zinc-950 sm:text-6xl">Toda produção por cliente.</h1>
+            <p className="mt-5 max-w-2xl text-base leading-7 text-zinc-500">Status, prazo, tarefas, orçamento e plano em uma visão clara para execução.</p>
           </div>
         </header>
 

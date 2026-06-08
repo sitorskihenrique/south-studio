@@ -80,11 +80,11 @@ export function AuthForm({ mode, nextPath = "/dashboard", missingConfig }: { mod
 
   return (
     <main className="min-h-[100dvh] bg-zinc-100 px-4 py-6 text-zinc-950 sm:grid sm:place-items-center">
-      <section className="mx-auto grid w-full max-w-5xl overflow-hidden rounded-[32px] border border-white/70 bg-white shadow-2xl shadow-zinc-950/10 lg:grid-cols-[0.95fr_1.05fr]">
+      <section className="mx-auto grid w-full max-w-5xl overflow-hidden rounded-[32px] border border-white/70 bg-white shadow-xl shadow-zinc-950/8 lg:grid-cols-[0.95fr_1.05fr]">
         <div className="hidden bg-zinc-950 p-8 text-white lg:flex lg:flex-col lg:justify-between">
-          <Link href="/" className="inline-flex items-center gap-3 text-sm font-semibold"><span className="grid h-10 w-10 place-items-center rounded-2xl bg-white text-zinc-950">S</span>South Studio</Link>
+          <Link href="/" className="inline-flex items-center gap-3 text-sm font-semibold"><span className="grid h-10 w-10 place-items-center rounded-2xl bg-white text-zinc-950">S</span>South Studio <span className="rounded-full border border-white/20 px-2 py-0.5 text-[10px] uppercase text-white/60">beta</span></Link>
           <div>
-            <p className="text-sm font-medium text-white/54">Produção sem ruído</p>
+            <p className="text-sm font-medium text-white/54">Workflow audiovisual</p>
             <h1 className="mt-4 text-4xl font-semibold tracking-tight">Seu fluxo audiovisual em um só lugar.</h1>
             <p className="mt-5 text-sm leading-6 text-zinc-300">Entre para planejar, orçar e executar projetos com mais clareza.</p>
           </div>

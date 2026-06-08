@@ -115,18 +115,17 @@ export function TaskTool() {
   return (
     <section className="h-full overflow-y-auto">
       <div className="mx-auto max-w-[1320px] px-4 py-5 sm:px-8 lg:px-10 lg:py-9 fade-in">
-        <header className="relative overflow-hidden rounded-[32px] bg-zinc-950 p-6 text-white shadow-2xl shadow-zinc-950/18 sm:p-8">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_88%_0%,rgba(255,255,255,0.24),transparent_24%),linear-gradient(135deg,rgba(255,255,255,0.08),rgba(255,255,255,0))]" />
-          <div className="relative flex flex-col justify-between gap-6 sm:flex-row sm:items-end">
+        <header className="studio-card rounded-[32px] p-6 sm:p-8">
+          <div className="flex flex-col justify-between gap-6 sm:flex-row sm:items-end">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/48">Semana em movimento</p>
-              <h1 className="mt-4 text-4xl font-semibold tracking-tight sm:text-6xl">Tarefas</h1>
-              <p className="mt-4 max-w-2xl text-sm leading-6 text-white/62">{summary.todo} a fazer, {summary.progress} em progresso e {summary.completed} concluídas.</p>
-              <p className="mt-2 text-xs font-medium text-white/40">{storageLabel}</p>
+              <p className="text-xs font-semibold uppercase text-zinc-500">Semana em movimento</p>
+              <h1 className="mt-4 text-4xl font-semibold text-zinc-950 sm:text-6xl">Tarefas</h1>
+              <p className="mt-4 max-w-2xl text-sm leading-6 text-zinc-500">{summary.todo} a fazer, {summary.progress} em progresso e {summary.completed} concluídas.</p>
+              <p className="mt-2 text-xs font-medium text-zinc-400">{storageLabel}</p>
             </div>
-          <button type="button" onClick={openNewTask} className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-white px-5 text-sm font-semibold text-zinc-950 shadow-lg shadow-zinc-950/15 transition hover:bg-zinc-200 sm:w-fit">
-            <Plus size={18} />Nova tarefa
-          </button>
+            <button type="button" onClick={openNewTask} className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-zinc-950 px-5 text-sm font-semibold text-white transition hover:bg-zinc-800 sm:w-fit">
+              <Plus size={18} />Nova tarefa
+            </button>
           </div>
         </header>
 

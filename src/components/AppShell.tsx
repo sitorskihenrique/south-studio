@@ -50,14 +50,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="studio-shell min-h-[100dvh] text-zinc-950 lg:p-4 xl:p-5">
-      <div className="mx-auto flex min-h-[100dvh] w-full max-w-[1680px] flex-col bg-white/35 lg:min-h-[calc(100dvh-40px)] lg:flex-row lg:overflow-hidden lg:rounded-[32px] lg:border lg:border-white/70 lg:shadow-[0_30px_100px_rgba(15,15,15,0.12)] lg:backdrop-blur-2xl">
-        <header className="sticky top-0 z-50 border-b border-zinc-200/70 bg-white/78 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-2xl lg:hidden">
+      <div className="mx-auto flex min-h-[100dvh] w-full max-w-[1680px] flex-col bg-white/65 lg:min-h-[calc(100dvh-40px)] lg:flex-row lg:overflow-hidden lg:rounded-[32px] lg:border lg:border-zinc-200 lg:shadow-[0_18px_70px_rgba(15,15,15,0.08)]">
+        <header className="sticky top-0 z-50 border-b border-zinc-200/70 bg-white/94 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] lg:hidden">
           <div className="flex items-center justify-between gap-3">
             <Link href="/dashboard" className="flex min-w-0 items-center gap-3">
               <BrandMark />
               <span className="min-w-0">
-                <span className="block truncate text-base font-semibold leading-tight">South Studio</span>
-                <span className="block truncate text-xs font-medium text-zinc-500">{user?.email || "Produção sem ruído"}</span>
+                <span className="flex items-center gap-2 truncate text-base font-semibold leading-tight">South Studio <BetaBadge /></span>
+                <span className="block truncate text-xs font-medium text-zinc-500">{user?.email || "Workflow audiovisual"}</span>
               </span>
             </Link>
             <button type="button" onClick={signOut} disabled={signingOut} className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-zinc-950 text-white shadow-lg shadow-zinc-950/10" aria-label="Sair">
@@ -71,7 +71,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <Link href="/dashboard" className="flex items-center gap-3 rounded-3xl px-2 py-2">
             <BrandMark />
             <span>
-              <span className="block text-base font-semibold leading-tight">South Studio</span>
+              <span className="flex items-center gap-2 text-base font-semibold leading-tight">South Studio <BetaBadge /></span>
               <span className="text-xs font-medium text-zinc-500">Workflow audiovisual</span>
             </span>
           </Link>
@@ -95,9 +95,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </aside>
 
-        <main className="min-w-0 flex-1 overflow-hidden pb-[calc(5.25rem+env(safe-area-inset-bottom))] lg:pb-0">{children}</main>
+        <main className="min-w-0 flex-1 overflow-hidden">{children}</main>
 
-        <nav className="fixed inset-x-0 bottom-0 z-[80] grid grid-cols-5 border-t border-zinc-200/70 bg-white/86 px-2 pb-[max(0.35rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-16px_50px_rgba(0,0,0,0.12)] backdrop-blur-2xl lg:hidden">
+        <nav className="z-[80] grid shrink-0 grid-cols-5 border-t border-zinc-200/70 bg-white/96 px-2 pb-[max(0.35rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-10px_34px_rgba(0,0,0,0.08)] lg:hidden">
           {navigation.map((item) => {
             const Icon = item.icon;
             const active = pathname === item.href;
@@ -115,6 +115,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
 function BrandMark() {
   return <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white text-sm font-semibold text-zinc-950 shadow-lg shadow-black/10">S</span>;
+}
+
+function BetaBadge() {
+  return <span className="rounded-full border border-zinc-300/70 bg-white px-2 py-0.5 text-[10px] font-semibold uppercase text-zinc-500">beta</span>;
 }
 
 function DesktopLink({ item, active }: { item: { href: string; desktopLabel: string; icon: typeof LayoutDashboard }; active: boolean }) {

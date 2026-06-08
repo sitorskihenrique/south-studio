@@ -165,7 +165,7 @@ export function BudgetCalculator() {
   return (
     <section className="h-full overflow-y-auto">
       <div className="mx-auto max-w-[1340px] px-4 py-5 sm:px-8 lg:px-10 lg:py-9 fade-in">
-        <header className="mb-6 rounded-[32px] bg-white/70 p-5 shadow-xl shadow-zinc-950/6 backdrop-blur sm:p-7">
+        <header className="studio-card mb-6 rounded-[32px] p-5 sm:p-7">
           <div className="flex flex-col justify-between gap-5 xl:flex-row xl:items-end">
             <div>
               <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-semibold text-zinc-500">

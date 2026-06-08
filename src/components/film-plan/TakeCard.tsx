@@ -97,7 +97,7 @@ export function TakeCard({
                 type="button"
                 onClick={() => patch({ images: take.images.filter((item) => item.id !== image.id) })}
                 aria-label={`Remover imagem ${image.name}`}
-                className="absolute right-2 top-2 grid h-8 w-8 place-items-center rounded-full bg-black/60 text-white opacity-0 backdrop-blur transition group-hover:opacity-100"
+                className="absolute right-2 top-2 grid h-8 w-8 place-items-center rounded-full bg-black/70 text-white opacity-0 transition group-hover:opacity-100"
               >
                 <X size={15} />
               </button>

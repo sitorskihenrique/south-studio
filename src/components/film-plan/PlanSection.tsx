@@ -19,7 +19,7 @@ export function PlanSection({
     <section className="studio-card rounded-[28px] p-4 sm:p-6">
       <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-700">{eyebrow}</p>
+          <p className="text-xs font-semibold uppercase text-zinc-500">{eyebrow}</p>
           <h2 className="mt-2 text-xl font-semibold tracking-tight text-zinc-950">{title}</h2>
           {description && <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-500">{description}</p>}
         </div>

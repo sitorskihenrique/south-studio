@@ -43,7 +43,7 @@ export function DashboardTasks() {
     <section className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
       <div className="studio-card rounded-[28px] p-4 sm:p-6">
         <div className="flex items-center justify-between gap-3">
-          <div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-teal-700">Hoje · {today}</p><h2 className="mt-2 text-xl font-semibold text-zinc-950">Tarefas de hoje</h2></div>
+          <div><p className="text-xs font-semibold uppercase text-zinc-500">Hoje · {today}</p><h2 className="mt-2 text-xl font-semibold text-zinc-950">Tarefas de hoje</h2></div>
           <span className="grid h-11 min-w-11 place-items-center rounded-xl bg-zinc-950 px-3 text-sm font-semibold text-white">{todayTasks.length}</span>
         </div>
         <div className="mt-5 space-y-2">
@@ -55,7 +55,7 @@ export function DashboardTasks() {
 
       <div className="studio-card rounded-[28px] p-4 sm:p-6">
         <div className="flex items-start justify-between gap-3">
-          <div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-violet-700">Visão da semana</p><h2 className="mt-2 text-xl font-semibold text-zinc-950">Próximas tarefas</h2></div>
+          <div><p className="text-xs font-semibold uppercase text-zinc-500">Visão da semana</p><h2 className="mt-2 text-xl font-semibold text-zinc-950">Próximas tarefas</h2></div>
           <div className="text-right"><p className="text-3xl font-semibold tracking-tight text-zinc-950">{pending.length}</p><p className="text-xs font-medium text-zinc-500">pendentes</p></div>
         </div>
         <div className="mt-5 space-y-2">

@@ -37,11 +37,11 @@ export function TaskFormSheet({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[120] flex items-end justify-center bg-zinc-950/45 p-0 backdrop-blur-sm sm:items-center sm:p-5" role="dialog" aria-modal="true" aria-label={editing ? "Editar tarefa" : "Nova tarefa"}>
+    <div className="fixed inset-0 z-[120] flex items-end justify-center bg-zinc-950/45 p-0 sm:items-center sm:p-5" role="dialog" aria-modal="true" aria-label={editing ? "Editar tarefa" : "Nova tarefa"}>
       <button type="button" aria-label="Fechar painel de tarefa" onClick={onClose} className="absolute inset-0 h-full w-full cursor-default" />
       <form
         onSubmit={(event) => { event.preventDefault(); onSubmit(); }}
-        className="relative z-10 flex max-h-[92dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:rounded-3xl"
+        className="relative z-10 flex max-h-[92dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-3xl bg-white shadow-xl sm:rounded-3xl"
       >
         <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-4 sm:px-6">
           <div>
