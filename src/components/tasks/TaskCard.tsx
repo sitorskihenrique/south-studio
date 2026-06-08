@@ -33,7 +33,7 @@ export function TaskCard({
   const priority = priorityStyles[task.priority];
 
   return (
-    <article data-testid={`task-card-${task.id}`} className={`border-l-4 ${priority.line} rounded-2xl border-y border-r border-zinc-200/80 bg-white p-4 shadow-sm transition hover:shadow-md sm:p-5`}>
+    <article data-testid={`task-card-${task.id}`} className={`studio-card border-l-4 ${priority.line} rounded-[26px] p-4 sm:p-5`}>
       <div className="flex items-start gap-3">
         <button
           type="button"
@@ -67,7 +67,7 @@ export function TaskCard({
             </span>
             <label className="relative">
               <span className="sr-only">Mover tarefa para outro dia</span>
-              <select value={task.day} onChange={(event) => onMove(event.target.value as TaskDay)} className="min-h-11 rounded-xl border border-zinc-200 bg-white px-3 pr-8 text-xs font-semibold text-zinc-600 outline-none focus:border-teal-500">
+              <select value={task.day} onChange={(event) => onMove(event.target.value as TaskDay)} className="min-h-11 rounded-2xl border border-zinc-200 bg-white px-3 pr-8 text-xs font-semibold text-zinc-600 outline-none transition focus:border-zinc-400">
                 {taskDays.map((day) => <option key={day} value={day}>{day}</option>)}
               </select>
             </label>
@@ -75,7 +75,7 @@ export function TaskCard({
         </div>
       </div>
 
-      <div className="mt-4 flex justify-end gap-1 border-t border-zinc-100 pt-3">
+      <div className="mt-4 flex justify-end gap-1 border-t border-zinc-100/80 pt-3">
         <TaskAction label={`Editar ${task.title}`} onClick={onEdit}><Edit3 size={17} /></TaskAction>
         <TaskAction label={`Duplicar ${task.title}`} onClick={onDuplicate}><Copy size={17} /></TaskAction>
         <TaskAction label={`Excluir ${task.title}`} onClick={onDelete} danger><Trash2 size={17} /></TaskAction>

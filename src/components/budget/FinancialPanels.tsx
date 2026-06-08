@@ -43,10 +43,10 @@ export function FinancialFlow({
           onChange={(value) => updateSetting("taxPercent", value)}
         />
       </div>
-      <div className="mt-5 flex flex-col justify-between gap-3 rounded-2xl bg-violet-600 p-5 text-white sm:flex-row sm:items-center">
+      <div className="mt-5 flex flex-col justify-between gap-3 rounded-[24px] bg-zinc-950 p-5 text-white sm:flex-row sm:items-center">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-violet-200">Valor final</p>
-          <p className="mt-1 text-sm text-violet-100">Parcial com lucro + impostos</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-white/50">Valor final</p>
+          <p className="mt-1 text-sm text-white/58">Parcial com lucro + impostos</p>
         </div>
         <p className="text-3xl font-semibold tracking-tight tabular-nums">{formatCurrency(totals.finalValue)}</p>
       </div>
@@ -168,8 +168,8 @@ function FlowCard({
   icon: typeof CreditCard;
 }) {
   return (
-    <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
-      <Icon size={18} className="text-violet-600" />
+    <div className="rounded-[24px] border border-zinc-200 bg-zinc-50/80 p-4">
+      <Icon size={18} className="text-zinc-600" />
       <p className="mt-4 text-xs font-medium text-zinc-500">{label}</p>
       <p className="mt-1 text-lg font-semibold tabular-nums text-zinc-900">{formatCurrency(value)}</p>
     </div>
@@ -188,7 +188,7 @@ function PercentCard({
   onChange: (value: number) => void;
 }) {
   return (
-    <div className="rounded-2xl border border-zinc-200 bg-white p-4">
+    <div className="rounded-[24px] border border-zinc-200 bg-white/84 p-4">
       <div className="flex items-center justify-between gap-3">
         <p className="text-xs font-medium text-zinc-500">{label}</p>
         <div className="w-24">

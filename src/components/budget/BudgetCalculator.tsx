@@ -27,7 +27,7 @@ export function BudgetCalculator() {
   const [ready, setReady] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [saveStatus, setSaveStatus] = useState("Rascunho salvo localmente");
-  const [storageLabel, setStorageLabel] = useState("Fallback local");
+  const [storageLabel, setStorageLabel] = useState("Modo local");
   const totals = useMemo(() => calculateBudget(budget), [budget]);
 
   useEffect(() => {
@@ -40,10 +40,10 @@ export function BudgetCalculator() {
     readCloudItems<SavedBudget>("budgets").then((result) => {
       if (!mounted) return;
       if (!result.authenticated) {
-        setStorageLabel("Fallback local");
+        setStorageLabel("Modo local");
         return;
       }
-      setStorageLabel(result.ok ? "Sincronizado com Supabase" : "Fallback local ativo");
+      setStorageLabel(result.ok ? "Sincronizado na conta" : "Salvo neste dispositivo");
       if (result.ok && result.items.length) setSavedBudgets(result.items);
     });
     return () => { mounted = false; };
@@ -106,7 +106,7 @@ export function BudgetCalculator() {
     writeLocalStorage(savedBudgetsStorageKey, next);
     writeLocalStorage(draftStorageKey, saved.budget);
     const cloud = await upsertCloudItem("budgets", saved, saved.projectName);
-    if (cloud.authenticated) setStorageLabel(cloud.ok ? "Sincronizado com Supabase" : "Fallback local ativo");
+    if (cloud.authenticated) setStorageLabel(cloud.ok ? "Sincronizado na conta" : "Salvo neste dispositivo");
     setDirty(false);
     setSaveStatus(cloud.authenticated && cloud.ok ? "Orçamento salvo na sua conta." : "Orçamento salvo localmente.");
   }
@@ -127,7 +127,7 @@ export function BudgetCalculator() {
     writeLocalStorage(savedBudgetsStorageKey, next);
     writeLocalStorage(draftStorageKey, saved.budget);
     const cloud = await upsertCloudItem("budgets", saved, saved.projectName);
-    if (cloud.authenticated) setStorageLabel(cloud.ok ? "Sincronizado com Supabase" : "Fallback local ativo");
+    if (cloud.authenticated) setStorageLabel(cloud.ok ? "Sincronizado na conta" : "Salvo neste dispositivo");
     setDirty(false);
     setSaveStatus(cloud.authenticated && cloud.ok ? "Orçamento salvo como novo na sua conta." : "Orçamento salvo como novo localmente.");
     setActiveTab("create");
@@ -146,7 +146,7 @@ export function BudgetCalculator() {
     setSavedBudgets(next);
     writeLocalStorage(savedBudgetsStorageKey, next);
     const cloud = await deleteCloudItem("budgets", item.id);
-    if (cloud.authenticated) setStorageLabel(cloud.ok ? "Sincronizado com Supabase" : "Fallback local ativo");
+    if (cloud.authenticated) setStorageLabel(cloud.ok ? "Sincronizado na conta" : "Salvo neste dispositivo");
   }
 
   async function changeSavedStatus(item: SavedBudget, status: BudgetStatus) {
@@ -156,7 +156,7 @@ export function BudgetCalculator() {
     setSavedBudgets(next);
     writeLocalStorage(savedBudgetsStorageKey, next);
     const cloud = await upsertCloudItem("budgets", updated, updated.projectName);
-    if (cloud.authenticated) setStorageLabel(cloud.ok ? "Sincronizado com Supabase" : "Fallback local ativo");
+    if (cloud.authenticated) setStorageLabel(cloud.ok ? "Sincronizado na conta" : "Salvo neste dispositivo");
     if (budget.id === item.id) setBudget(updated.budget);
   }
 
@@ -164,19 +164,19 @@ export function BudgetCalculator() {
 
   return (
     <section className="h-full overflow-y-auto">
-      <div className="mx-auto max-w-[1340px] px-3 py-5 sm:px-7 lg:px-8 lg:py-8">
-        <header className="mb-6">
+      <div className="mx-auto max-w-[1340px] px-4 py-5 sm:px-8 lg:px-10 lg:py-9 fade-in">
+        <header className="mb-6 rounded-[32px] bg-white/70 p-5 shadow-xl shadow-zinc-950/6 backdrop-blur sm:p-7">
           <div className="flex flex-col justify-between gap-5 xl:flex-row xl:items-end">
             <div>
-              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-xs font-semibold text-violet-700">
+              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-semibold text-zinc-500">
                 <Sparkles size={14} />
-                Gestão de orçamentos audiovisual
+                Clareza financeira
               </div>
-              <h1 className="text-3xl font-semibold tracking-tight text-zinc-950 sm:text-4xl">
+              <h1 className="text-4xl font-semibold tracking-tight text-zinc-950 sm:text-6xl">
                 Calculadora de Orçamento
               </h1>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-600 sm:text-base">
-                Crie, salve e acompanhe propostas com custo, margem, impostos e lucro.
+              <p className="mt-4 max-w-2xl text-sm leading-6 text-zinc-500 sm:text-base">
+                Menos planilha. Mais decisão. Precifique com margem, prazo e entrega em foco.
               </p>
             </div>
             {activeTab === "create" && (

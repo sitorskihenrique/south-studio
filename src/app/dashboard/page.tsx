@@ -1,40 +1,102 @@
 import Link from "next/link";
-import { ArrowRight, Calculator, CalendarClock, CheckSquare2, Sparkles } from "lucide-react";
+import { ArrowRight, Calculator, CalendarClock, CheckSquare2, FolderKanban, Layers3 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { DashboardTasks } from "@/components/tasks/DashboardTasks";
 
 const tools = [
-  { title: "Calculadora", description: "Precifique projetos com custos, margens e lucro em tempo real.", href: "/calculadora", icon: Calculator, color: "bg-teal-50 text-teal-700" },
-  { title: "Plano de Filmagem", description: "Centralize ordem do dia, shotlist, takes e referências visuais.", href: "/plano-de-filmagem", icon: CalendarClock, color: "bg-violet-50 text-violet-700" },
-  { title: "Tarefas", description: "Organize demandas de produção e acompanhe sua semana.", href: "/tarefas", icon: CheckSquare2, color: "bg-amber-50 text-amber-700" },
+  {
+    title: "Calculadora",
+    kicker: "Orçar",
+    description: "Propostas com margem, imposto e lucro em leitura executiva.",
+    href: "/calculadora",
+    icon: Calculator,
+    tone: "from-emerald-300/24 to-zinc-950",
+  },
+  {
+    title: "Plano de Filmagem",
+    kicker: "Dirigir",
+    description: "Shotlist, takes, imagens e timeline em um plano visual.",
+    href: "/plano-de-filmagem",
+    icon: CalendarClock,
+    tone: "from-sky-300/24 to-zinc-950",
+  },
+  {
+    title: "Tarefas",
+    kicker: "Executar",
+    description: "Prioridades da semana com foco no que move a produção.",
+    href: "/tarefas",
+    icon: CheckSquare2,
+    tone: "from-amber-300/24 to-zinc-950",
+  },
+  {
+    title: "Projetos",
+    kicker: "Centralizar",
+    description: "Clientes, status, prazos e progresso por produção.",
+    href: "/projetos",
+    icon: FolderKanban,
+    tone: "from-rose-300/24 to-zinc-950",
+  },
 ];
 
 export default function Dashboard() {
   return (
     <AppShell>
       <section className="h-full overflow-y-auto px-4 py-5 sm:px-8 lg:px-10 lg:py-9">
-        <div className="mx-auto max-w-[1320px] space-y-6">
-          <header className="flex flex-col justify-between gap-5 md:flex-row md:items-end">
-            <div>
-              <div className="mb-3 hidden items-center gap-2 rounded-full border border-white/80 bg-white/70 px-3 py-1 text-xs font-semibold text-zinc-600 shadow-sm sm:inline-flex"><Sparkles size={14} />Studio hub</div>
-              <h1 className="max-w-2xl text-3xl font-semibold tracking-tight text-zinc-950 sm:text-5xl">Produção organizada, da ideia à entrega.</h1>
-              <p className="mt-4 max-w-xl text-sm leading-6 text-zinc-600 sm:text-base sm:leading-7">Acompanhe a semana, planeje gravações e mantenha seus orçamentos em um só lugar.</p>
+        <div className="mx-auto max-w-[1380px] space-y-6 fade-in">
+          <header className="relative overflow-hidden rounded-[32px] bg-zinc-950 p-6 text-white shadow-2xl shadow-zinc-950/20 sm:p-8 lg:p-10">
+            <div className="absolute inset-0 opacity-70">
+              <div className="grid h-full rotate-[-6deg] scale-125 grid-cols-5 gap-3">
+                {Array.from({ length: 10 }).map((_, index) => (
+                  <div key={index} className={`rounded-[28px] bg-gradient-to-br ${index % 2 ? "from-white/20 to-white/0" : "from-red-400/20 to-cyan-300/0"}`} />
+                ))}
+              </div>
             </div>
-            <Link href="/tarefas" className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-zinc-950 px-5 text-sm font-semibold text-white shadow-xl shadow-zinc-950/15 sm:w-fit">Ver tarefas <ArrowRight size={17} /></Link>
+            <div className="relative max-w-4xl">
+              <p className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/8 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-white/64 backdrop-blur">
+                <Layers3 size={14} />
+                South Studio
+              </p>
+              <h1 className="mt-8 max-w-4xl text-4xl font-semibold tracking-tight sm:text-6xl lg:text-7xl">
+                Produção sem ruído.
+              </h1>
+              <p className="mt-5 max-w-2xl text-base leading-7 text-white/62">
+                Planeje, orce e execute com clareza. Tudo da produção em um só lugar.
+              </p>
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                <Link href="/projetos" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-white px-5 text-sm font-semibold text-zinc-950 transition hover:bg-zinc-200">
+                  Abrir projetos <ArrowRight size={17} />
+                </Link>
+                <Link href="/tarefas" className="inline-flex min-h-12 items-center justify-center rounded-full border border-white/16 bg-white/8 px-5 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/14">
+                  Ver semana
+                </Link>
+              </div>
+            </div>
           </header>
 
           <DashboardTasks />
 
           <section>
-            <div className="mb-4"><p className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">Ferramentas</p><h2 className="mt-2 text-xl font-semibold text-zinc-950">Fluxo South Studio</h2></div>
-            <div className="grid gap-3 md:grid-cols-3">
+            <div className="mb-4 flex items-end justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-zinc-500">Fluxo de trabalho</p>
+                <h2 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-950">Da pré à entrega</h2>
+              </div>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
               {tools.map((tool) => {
                 const Icon = tool.icon;
                 return (
-                  <Link key={tool.href} href={tool.href} className="group rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-soft sm:rounded-3xl">
-                    <div className="flex items-start justify-between gap-3"><span className={`grid h-12 w-12 place-items-center rounded-2xl ${tool.color}`}><Icon size={22} /></span><ArrowRight className="text-zinc-300 transition group-hover:translate-x-1 group-hover:text-zinc-700" size={18} /></div>
-                    <h3 className="mt-6 text-lg font-semibold text-zinc-950">{tool.title}</h3>
-                    <p className="mt-2 text-sm leading-6 text-zinc-500">{tool.description}</p>
+                  <Link key={tool.href} href={tool.href} className="group overflow-hidden rounded-[28px] bg-zinc-950 text-white shadow-xl shadow-zinc-950/8 transition hover:-translate-y-1 hover:shadow-2xl hover:shadow-zinc-950/14">
+                    <div className={`min-h-[220px] bg-gradient-to-br ${tool.tone} p-5`}>
+                      <div className="flex items-start justify-between gap-3">
+                        <span className="rounded-full border border-white/12 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-white/64">{tool.kicker}</span>
+                        <span className="grid h-10 w-10 place-items-center rounded-2xl bg-white text-zinc-950 transition group-hover:scale-105"><Icon size={19} /></span>
+                      </div>
+                      <div className="mt-16">
+                        <h3 className="text-2xl font-semibold tracking-tight">{tool.title}</h3>
+                        <p className="mt-3 text-sm leading-6 text-white/62">{tool.description}</p>
+                      </div>
+                    </div>
                   </Link>
                 );
               })}

@@ -41,7 +41,7 @@ export function DashboardTasks() {
 
   return (
     <section className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
-      <div className="rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
+      <div className="studio-card rounded-[28px] p-4 sm:p-6">
         <div className="flex items-center justify-between gap-3">
           <div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-teal-700">Hoje · {today}</p><h2 className="mt-2 text-xl font-semibold text-zinc-950">Tarefas de hoje</h2></div>
           <span className="grid h-11 min-w-11 place-items-center rounded-xl bg-zinc-950 px-3 text-sm font-semibold text-white">{todayTasks.length}</span>
@@ -53,7 +53,7 @@ export function DashboardTasks() {
         <Link href="/tarefas" className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-xl bg-zinc-950 px-4 text-sm font-semibold text-white">Abrir tarefas <ArrowRight size={16} /></Link>
       </div>
 
-      <div className="rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
+      <div className="studio-card rounded-[28px] p-4 sm:p-6">
         <div className="flex items-start justify-between gap-3">
           <div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-violet-700">Visão da semana</p><h2 className="mt-2 text-xl font-semibold text-zinc-950">Próximas tarefas</h2></div>
           <div className="text-right"><p className="text-3xl font-semibold tracking-tight text-zinc-950">{pending.length}</p><p className="text-xs font-medium text-zinc-500">pendentes</p></div>
@@ -69,8 +69,8 @@ export function DashboardTasks() {
 
 function DashboardTaskRow({ task, showDay }: { task: StudioTask; showDay?: boolean }) {
   return (
-    <div className="flex items-center gap-3 rounded-xl bg-zinc-50 px-3 py-3">
-      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-white text-zinc-600 shadow-sm"><CheckSquare2 size={16} /></span>
+    <div className="flex items-center gap-3 rounded-2xl bg-zinc-50 px-3 py-3">
+      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white text-zinc-600 shadow-sm"><CheckSquare2 size={16} /></span>
       <div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold text-zinc-800">{task.title}</p><p className="mt-0.5 text-xs font-medium text-zinc-500">{showDay ? task.day : task.category}</p></div>
       <span className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-zinc-500"><Clock3 size={13} />{formatMinutes(getEstimatedMinutes(task))}</span>
     </div>

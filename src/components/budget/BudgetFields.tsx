@@ -16,7 +16,7 @@ export function BudgetSection({
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border border-zinc-200/80 bg-white/82 p-4 shadow-sm sm:rounded-3xl sm:p-6">
+    <section className="studio-card rounded-[28px] p-4 sm:p-6">
       <div className="mb-6 flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-teal-700">
@@ -59,7 +59,7 @@ export function TextInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
   return (
     <input
       {...props}
-      className={`h-11 w-full rounded-xl border border-zinc-200 bg-white px-3.5 text-sm text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 ${props.className ?? ""}`}
+      className={`h-11 w-full rounded-2xl border border-zinc-200 bg-white/92 px-3.5 text-sm text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-zinc-400 focus:ring-4 focus:ring-zinc-950/5 ${props.className ?? ""}`}
     />
   );
 }
@@ -68,7 +68,7 @@ export function SelectInput(props: React.SelectHTMLAttributes<HTMLSelectElement>
   return (
     <select
       {...props}
-      className={`h-11 w-full rounded-xl border border-zinc-200 bg-white px-3.5 text-sm text-zinc-900 outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 ${props.className ?? ""}`}
+      className={`h-11 w-full rounded-2xl border border-zinc-200 bg-white/92 px-3.5 text-sm text-zinc-900 outline-none transition focus:border-zinc-400 focus:ring-4 focus:ring-zinc-950/5 ${props.className ?? ""}`}
     />
   );
 }
@@ -77,7 +77,7 @@ export function TextArea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement
   return (
     <textarea
       {...props}
-      className={`min-h-28 w-full resize-y rounded-xl border border-zinc-200 bg-white px-3.5 py-3 text-sm leading-6 text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-violet-500 focus:ring-4 focus:ring-violet-500/10 ${props.className ?? ""}`}
+      className={`min-h-28 w-full resize-y rounded-2xl border border-zinc-200 bg-white/92 px-3.5 py-3 text-sm leading-6 text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-zinc-400 focus:ring-4 focus:ring-zinc-950/5 ${props.className ?? ""}`}
     />
   );
 }
@@ -100,7 +100,7 @@ export function NumberInput({
         min="0"
         value={value}
         onChange={(event) => onValueChange(Math.max(0, Number(event.target.value) || 0))}
-        className={`h-11 w-full rounded-xl border border-zinc-200 bg-white px-3.5 text-sm tabular-nums text-zinc-900 outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 ${
+        className={`h-11 w-full rounded-2xl border border-zinc-200 bg-white/92 px-3.5 text-sm tabular-nums text-zinc-900 outline-none transition focus:border-zinc-400 focus:ring-4 focus:ring-zinc-950/5 ${
           suffix ? "pr-12" : ""
         } ${props.className ?? ""}`}
       />

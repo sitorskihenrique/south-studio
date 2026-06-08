@@ -17,7 +17,7 @@ export function TaskSummary({ tasks }: { tasks: StudioTask[] }) {
       {items.map((item) => {
         const Icon = item.icon;
         return (
-          <div key={item.label} className="min-w-[152px] snap-start rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-sm sm:min-w-0">
+          <div key={item.label} className="studio-card min-w-[152px] snap-start rounded-[24px] p-4 sm:min-w-0">
             <span className={`grid h-9 w-9 place-items-center rounded-xl ${item.color}`}><Icon size={17} /></span>
             <p className="mt-4 text-2xl font-semibold tracking-tight text-zinc-950">{item.value}</p>
             <p className="mt-1 text-xs font-medium text-zinc-500">{item.label}</p>

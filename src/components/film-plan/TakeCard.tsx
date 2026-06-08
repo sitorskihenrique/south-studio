@@ -52,9 +52,9 @@ export function TakeCard({
         event.preventDefault();
         onDrop();
       }}
-      className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm transition hover:shadow-lg hover:shadow-zinc-950/5 sm:rounded-3xl"
+      className="studio-card overflow-hidden rounded-[28px]"
     >
-      <div className="flex flex-wrap items-center gap-2 border-b border-zinc-100 bg-zinc-50/80 px-3 py-3 sm:flex-nowrap sm:gap-3 sm:px-4">
+      <div className="flex flex-wrap items-center gap-2 border-b border-zinc-100 bg-white/50 px-3 py-3 sm:flex-nowrap sm:gap-3 sm:px-4">
         <span
           draggable
           data-testid={`drag-take-${take.id}`}
@@ -140,10 +140,10 @@ export function TakeCard({
               ))}
             </div>
           </div>
-          <label className="flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-violet-300 bg-violet-50/60 p-4 text-center transition hover:bg-violet-50">
-            <ImagePlus size={22} className="text-violet-700" />
-            <span className="mt-3 text-sm font-semibold text-violet-800">Adicionar referências</span>
-            <span className="mt-1 text-xs text-violet-600">Storyboard, luz ou frame</span>
+          <label className="flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-[24px] border border-dashed border-zinc-300 bg-zinc-100/70 p-4 text-center transition hover:border-zinc-500 hover:bg-zinc-100">
+            <ImagePlus size={22} className="text-zinc-700" />
+            <span className="mt-3 text-sm font-semibold text-zinc-800">Adicionar referências</span>
+            <span className="mt-1 text-xs text-zinc-500">Storyboard, luz ou frame</span>
             <input type="file" accept="image/*" multiple className="sr-only" onChange={(event) => upload(event.target.files)} />
           </label>
         </div>

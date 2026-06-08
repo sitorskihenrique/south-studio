@@ -49,7 +49,7 @@ export function AccountSettings() {
     if ([budgetResult, filmResult, taskResult].every((result) => result.authenticated && result.ok)) {
       setMessage("Dados locais migrados para sua conta.");
     } else {
-      setMessage("Não foi possível migrar tudo agora. Confira Supabase e tente novamente.");
+      setMessage("Não foi possível migrar tudo agora. Tente novamente em instantes.");
     }
   }
 
@@ -57,13 +57,13 @@ export function AccountSettings() {
     <section className="h-full overflow-y-auto">
       <div className="mx-auto max-w-5xl px-4 py-6 sm:px-8 lg:py-9">
         <header>
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-teal-700">Conta</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-zinc-950 sm:text-4xl">Configurações</h1>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-500">Gerencie acesso, sincronização e migração dos dados locais do South Studio.</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-zinc-500">Conta</p>
+          <h1 className="mt-2 text-4xl font-semibold tracking-tight text-zinc-950 sm:text-6xl">Configurações</h1>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-500">Gerencie seu acesso e leve os dados deste dispositivo para sua conta.</p>
         </header>
 
         <div className="mt-6 grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
-          <section className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm">
+          <section className="studio-card rounded-[28px] p-5">
             <span className="grid h-12 w-12 place-items-center rounded-2xl bg-zinc-950 text-white"><UserRound size={22} /></span>
             <h2 className="mt-5 text-xl font-semibold text-zinc-950">Usuário logado</h2>
             <p className="mt-2 break-all text-sm font-medium text-zinc-700">{user?.email || "Carregando conta..."}</p>
@@ -73,10 +73,10 @@ export function AccountSettings() {
             </button>
           </section>
 
-          <section className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm">
+          <section className="studio-card rounded-[28px] p-5">
             <span className="grid h-12 w-12 place-items-center rounded-2xl bg-teal-50 text-teal-700"><CloudUpload size={22} /></span>
             <h2 className="mt-5 text-xl font-semibold text-zinc-950">Migrar dados locais</h2>
-            <p className="mt-2 text-sm leading-6 text-zinc-500">Envia orçamentos salvos, planos de filmagem e tarefas deste navegador para a sua conta Supabase. O localStorage continua como fallback temporário.</p>
+            <p className="mt-2 text-sm leading-6 text-zinc-500">Leva orçamentos, planos de filmagem e tarefas deste navegador para a sua conta.</p>
             <button type="button" onClick={migrateLocalData} disabled={loading} className="mt-6 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-zinc-200 px-5 text-sm font-semibold text-zinc-700 disabled:opacity-60">
               <CloudUpload size={17} />{loading ? "Migrando..." : "Migrar dados locais para minha conta"}
             </button>
@@ -84,12 +84,12 @@ export function AccountSettings() {
           </section>
         </div>
 
-        <div className="mt-4 rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm">
+        <div className="studio-card mt-4 rounded-[28px] p-5">
           <div className="flex items-start gap-3">
             <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-emerald-50 text-emerald-700"><ShieldCheck size={19} /></span>
             <div>
-              <h2 className="text-base font-semibold text-zinc-950">Segurança dos dados</h2>
-              <p className="mt-2 text-sm leading-6 text-zinc-500">As tabelas usam `user_id` e Row Level Security para impedir leitura, edição ou exclusão de dados de outros usuários.</p>
+              <h2 className="text-base font-semibold text-zinc-950">Privacidade da conta</h2>
+              <p className="mt-2 text-sm leading-6 text-zinc-500">Seu espaço de trabalho é individual e mantém seus projetos separados por conta.</p>
             </div>
           </div>
         </div>

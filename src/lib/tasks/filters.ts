@@ -5,8 +5,17 @@ export function getTodayTaskDay(date = new Date()): TaskDay {
   return taskDays[day === 0 ? 6 : day - 1];
 }
 
+export function getTomorrowTaskDay(date = new Date()): TaskDay {
+  const tomorrow = new Date(date);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  return getTodayTaskDay(tomorrow);
+}
+
 export function resolveDayFilter(day: TaskDayFilter): TaskDay {
-  return day === "Hoje" ? getTodayTaskDay() : day;
+  if (day === "Hoje") return getTodayTaskDay();
+  if (day === "Amanhã") return getTomorrowTaskDay();
+  if (day === "Essa semana" || day === "Concluídas") return getTodayTaskDay();
+  return day;
 }
 
 export function filterTasks(tasks: StudioTask[], day: TaskDayFilter, status: TaskStatusFilter, search: string) {
@@ -14,8 +23,8 @@ export function filterTasks(tasks: StudioTask[], day: TaskDayFilter, status: Tas
   const selectedDay = resolveDayFilter(day);
 
   return tasks.filter((task) => {
-    const matchesDay = task.day === selectedDay;
-    const matchesStatus = status === "Todos" || task.status === status;
+    const matchesDay = day === "Essa semana" || day === "Concluídas" || task.day === selectedDay;
+    const matchesStatus = day === "Concluídas" ? task.status === "Concluída" : status === "Todos" || task.status === status;
     const matchesSearch = !normalizedSearch || task.title.toLocaleLowerCase("pt-BR").includes(normalizedSearch);
     return matchesDay && matchesStatus && matchesSearch;
   });

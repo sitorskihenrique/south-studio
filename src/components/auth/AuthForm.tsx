@@ -16,7 +16,7 @@ export function AuthForm({ mode, nextPath = "/dashboard", missingConfig }: { mod
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
-  const [error, setError] = useState(missingConfig ? "Configure as variáveis do Supabase para acessar a área interna." : "");
+  const [error, setError] = useState(missingConfig ? "Ambiente de acesso pendente. Confira as configurações do app." : "");
 
   const title = mode === "login" ? "Entrar no South Studio" : "Criar sua conta";
   const action = mode === "login" ? "Entrar" : "Criar conta";
@@ -27,13 +27,13 @@ export function AuthForm({ mode, nextPath = "/dashboard", missingConfig }: { mod
     setError("");
     setMessage("");
 
-    if (!isSupabaseConfigured()) return setError("Supabase ainda não está configurado neste ambiente.");
+    if (!isSupabaseConfigured()) return setError("Acesso indisponível neste ambiente.");
     if (!validateEmail(email)) return setError("Digite um e-mail válido.");
     if (password.length < 6) return setError("A senha precisa ter pelo menos 6 caracteres.");
     if (mode === "cadastro" && name.trim().length < 2) return setError("Digite seu nome para criar a conta.");
 
     const supabase = createClient();
-    if (!supabase) return setError("Não foi possível iniciar o Supabase.");
+    if (!supabase) return setError("Não foi possível iniciar o acesso.");
 
     setLoading(true);
     if (mode === "login") {
@@ -58,16 +58,16 @@ export function AuthForm({ mode, nextPath = "/dashboard", missingConfig }: { mod
       router.refresh();
       return;
     }
-    setMessage("Conta criada. Confira seu e-mail se o Supabase pedir confirmação.");
+    setMessage("Conta criada. Confira seu e-mail se for preciso confirmar o acesso.");
   }
 
   async function signInWithGoogle() {
     setError("");
     setMessage("");
-    if (!isSupabaseConfigured()) return setError("Supabase ainda não está configurado neste ambiente.");
+    if (!isSupabaseConfigured()) return setError("Acesso indisponível neste ambiente.");
 
     const supabase = createClient();
-    if (!supabase) return setError("Não foi possível iniciar o Supabase.");
+    if (!supabase) return setError("Não foi possível iniciar o acesso.");
 
     setLoading(true);
     const { error } = await supabase.auth.signInWithOAuth({
@@ -80,22 +80,22 @@ export function AuthForm({ mode, nextPath = "/dashboard", missingConfig }: { mod
 
   return (
     <main className="min-h-[100dvh] bg-zinc-100 px-4 py-6 text-zinc-950 sm:grid sm:place-items-center">
-      <section className="mx-auto grid w-full max-w-5xl overflow-hidden rounded-3xl border border-white/70 bg-white shadow-soft lg:grid-cols-[0.95fr_1.05fr]">
+      <section className="mx-auto grid w-full max-w-5xl overflow-hidden rounded-[32px] border border-white/70 bg-white shadow-2xl shadow-zinc-950/10 lg:grid-cols-[0.95fr_1.05fr]">
         <div className="hidden bg-zinc-950 p-8 text-white lg:flex lg:flex-col lg:justify-between">
           <Link href="/" className="inline-flex items-center gap-3 text-sm font-semibold"><span className="grid h-10 w-10 place-items-center rounded-2xl bg-white text-zinc-950">S</span>South Studio</Link>
           <div>
-            <p className="text-sm font-medium text-teal-200">Produção audiovisual segura</p>
-            <h1 className="mt-4 text-4xl font-semibold tracking-tight">Ferramentas protegidas para equipes reais.</h1>
-            <p className="mt-5 text-sm leading-6 text-zinc-300">Login, banco de dados por usuário e base pronta para distribuir o South Studio sem misturar informações entre contas.</p>
+            <p className="text-sm font-medium text-white/54">Produção sem ruído</p>
+            <h1 className="mt-4 text-4xl font-semibold tracking-tight">Seu fluxo audiovisual em um só lugar.</h1>
+            <p className="mt-5 text-sm leading-6 text-zinc-300">Entre para planejar, orçar e executar projetos com mais clareza.</p>
           </div>
-          <div className="flex items-center gap-3 rounded-2xl bg-white/8 p-4 text-sm text-zinc-200"><ShieldCheck size={19} className="text-teal-200" />Dados separados por usuário com RLS.</div>
+          <div className="flex items-center gap-3 rounded-2xl bg-white/8 p-4 text-sm text-zinc-200"><ShieldCheck size={19} className="text-white/70" />Conta individual para seu estúdio.</div>
         </div>
 
         <div className="p-5 sm:p-8">
           <Link href="/" className="mb-8 inline-flex items-center text-sm font-semibold text-zinc-500 lg:hidden">South Studio</Link>
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-teal-700">{mode === "login" ? "Acesso" : "Cadastro"}</p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight">{title}</h1>
-          <p className="mt-3 text-sm leading-6 text-zinc-500">Acesse dashboard, calculadora, plano de filmagem e tarefas com seus dados salvos na sua conta.</p>
+          <p className="mt-3 text-sm leading-6 text-zinc-500">Acesse sua central de produção, orçamento, plano e tarefas.</p>
 
           <button type="button" onClick={signInWithGoogle} disabled={loading} className="mt-6 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60">
             <Mail size={18} />Continuar com Google

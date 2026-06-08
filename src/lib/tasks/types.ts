@@ -9,7 +9,7 @@ export type TaskCategory = (typeof taskCategories)[number];
 export type TaskPriority = (typeof taskPriorities)[number];
 export type TaskStatus = (typeof taskStatuses)[number];
 export type TaskTime = (typeof taskTimeOptions)[number];
-export type TaskDayFilter = "Hoje" | TaskDay;
+export type TaskDayFilter = "Hoje" | "Amanhã" | "Essa semana" | "Concluídas" | TaskDay;
 export type TaskStatusFilter = "Todos" | TaskStatus;
 
 export interface StudioTask {

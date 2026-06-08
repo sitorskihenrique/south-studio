@@ -22,7 +22,7 @@ export function FilmPlanTool() {
   const [ready, setReady] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [message, setMessage] = useState("Rascunho salvo localmente");
-  const [storageLabel, setStorageLabel] = useState("Fallback local");
+  const [storageLabel, setStorageLabel] = useState("Modo local");
 
   const activeDay = useMemo(() => plan.days.find((day) => day.id === plan.activeDayId) || plan.days[0], [plan]);
 
@@ -35,10 +35,10 @@ export function FilmPlanTool() {
     readCloudItems<SavedFilmPlan>("film_plans").then((result) => {
       if (!mounted) return;
       if (!result.authenticated) {
-        setStorageLabel("Fallback local");
+        setStorageLabel("Modo local");
         return;
       }
-      setStorageLabel(result.ok ? "Sincronizado com Supabase" : "Fallback local ativo");
+      setStorageLabel(result.ok ? "Sincronizado na conta" : "Salvo neste dispositivo");
       if (result.ok && result.items.length) setSavedPlans(result.items);
     });
     return () => { mounted = false; };
@@ -83,7 +83,7 @@ export function FilmPlanTool() {
     setPlan(saved.plan);
     writeFilmPlanStorage(filmPlanDraftKey, saved.plan);
     const cloud = await upsertCloudItem("film_plans", saved, saved.projectName);
-    if (cloud.authenticated) setStorageLabel(cloud.ok ? "Sincronizado com Supabase" : "Fallback local ativo");
+    if (cloud.authenticated) setStorageLabel(cloud.ok ? "Sincronizado na conta" : "Salvo neste dispositivo");
     setDirty(false);
     setMessage(cloud.authenticated && cloud.ok ? "Plano salvo na sua conta." : "Plano salvo localmente.");
   }
@@ -96,7 +96,7 @@ export function FilmPlanTool() {
     setSavedPlans(next);
     setPlan(saved.plan);
     const cloud = await upsertCloudItem("film_plans", saved, saved.projectName);
-    if (cloud.authenticated) setStorageLabel(cloud.ok ? "Sincronizado com Supabase" : "Fallback local ativo");
+    if (cloud.authenticated) setStorageLabel(cloud.ok ? "Sincronizado na conta" : "Salvo neste dispositivo");
     setDirty(false);
     setMessage(cloud.authenticated && cloud.ok ? "Plano duplicado na sua conta." : "Plano duplicado localmente.");
     setView("editor");
@@ -115,15 +115,15 @@ export function FilmPlanTool() {
     setSavedPlans(next);
     writeFilmPlanStorage(savedFilmPlansKey, next);
     const cloud = await deleteCloudItem("film_plans", saved.id);
-    if (cloud.authenticated) setStorageLabel(cloud.ok ? "Sincronizado com Supabase" : "Fallback local ativo");
+    if (cloud.authenticated) setStorageLabel(cloud.ok ? "Sincronizado na conta" : "Salvo neste dispositivo");
   }
 
   return (
     <section className="h-full overflow-y-auto">
-      <div className="mx-auto max-w-[1400px] px-3 py-5 sm:px-7 lg:px-8 lg:py-8">
-        <header>
-          <div className="flex flex-col justify-between gap-5 xl:flex-row xl:items-end">
-            <div><div className="mb-3 inline-flex items-center gap-2 rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-xs font-semibold text-violet-700"><Sparkles size={14} />Direção e produção integradas</div><h1 className="text-3xl font-semibold tracking-tight text-zinc-950 sm:text-4xl">Plano de Filmagem</h1><p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-600 sm:text-base">Ordem do dia, shotlist, referências, cronograma e checklist de takes em uma única experiência.</p></div>
+      <div className="mx-auto max-w-[1400px] px-4 py-5 sm:px-8 lg:px-10 lg:py-9 fade-in">
+        <header className="rounded-[32px] bg-zinc-950 p-6 text-white shadow-2xl shadow-zinc-950/18 sm:p-8">
+          <div className="flex flex-col justify-between gap-6 xl:flex-row xl:items-end">
+            <div><div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/8 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-white/58"><Sparkles size={14} />Direção visual</div><h1 className="text-4xl font-semibold tracking-tight sm:text-6xl">Plano de Filmagem</h1><p className="mt-4 max-w-2xl text-sm leading-6 text-white/62 sm:text-base">Shotlist, referências, timeline e checklist de takes em uma experiência de set.</p></div>
             {view !== "saved" && <div className="flex flex-wrap gap-2"><Action icon={CalendarPlus} label="Novo plano" onClick={newPlan} /><Action icon={Save} label="Salvar plano" onClick={savePlan} primary /><Action icon={Copy} label="Duplicar" onClick={() => duplicate()} /></div>}
           </div>
           <div className="mt-6 flex w-full gap-1 overflow-x-auto rounded-2xl border border-zinc-200 bg-white p-1 sm:w-fit"><Tab icon={Film} label="Editor" active={view === "editor"} onClick={() => setView("editor")} /><Tab icon={LayoutList} label="Timeline" active={view === "timeline"} onClick={() => setView("timeline")} /><Tab icon={LayoutList} label={`Planos (${savedPlans.length})`} active={view === "saved"} onClick={() => setView("saved")} /></div>
@@ -178,7 +178,7 @@ function normalizePlan(stored: Partial<FilmPlan>): FilmPlan {
 }
 
 function Action({ icon: Icon, label, onClick, primary }: { icon: typeof Save; label: string; onClick: () => void; primary?: boolean }) {
-  return <button type="button" onClick={onClick} className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold transition ${primary ? "bg-zinc-950 text-white shadow-lg shadow-zinc-950/15 hover:bg-zinc-800" : "border border-zinc-200 bg-white text-zinc-700 hover:border-violet-300 hover:text-violet-700"}`}><Icon size={17} />{label}</button>;
+  return <button type="button" onClick={onClick} className={`inline-flex h-11 items-center justify-center gap-2 rounded-full px-4 text-sm font-semibold transition ${primary ? "bg-white text-zinc-950 shadow-lg shadow-zinc-950/15 hover:bg-zinc-200" : "border border-white/14 bg-white/8 text-white hover:bg-white/14"}`}><Icon size={17} />{label}</button>;
 }
 function Tab({ icon: Icon, label, active, onClick }: { icon: typeof Film; label: string; active: boolean; onClick: () => void }) {
   return <button type="button" onClick={onClick} className={`inline-flex min-h-11 min-w-fit items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold transition ${active ? "bg-zinc-950 text-white" : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900"}`}><Icon size={17} />{label}</button>;
