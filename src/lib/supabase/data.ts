@@ -60,7 +60,7 @@ export async function upsertCloudItem<T extends { id: string }>(table: CloudTabl
     id: item.id,
     user_id: user.id,
     title: title || "Sem título",
-    project_id: projectIdFor(item),
+    ...(table === "projects" ? {} : { project_id: projectIdFor(item) }),
     data: item,
     updated_at: new Date().toISOString(),
   }, { onConflict: "id,user_id" });
@@ -79,7 +79,7 @@ export async function replaceCloudItems<T extends { id: string }>(table: CloudTa
     id: item.id,
     user_id: user.id,
     title: titleForItem(item),
-    project_id: projectIdFor(item),
+    ...(table === "projects" ? {} : { project_id: projectIdFor(item) }),
     data: item,
     updated_at: new Date().toISOString(),
   }));

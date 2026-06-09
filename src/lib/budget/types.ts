@@ -56,6 +56,20 @@ export type BudgetSettings = {
   installmentRatePercent: number;
 };
 
+export type SimpleBudgetData = {
+  chargeType: "Por diária" | "Por hora" | "Misto";
+  preProductionHours: number;
+  filmingHours: number;
+  editingHours: number;
+  hourlyRate: number;
+  dayCount: number;
+  dayRate: number;
+  equipment: number;
+  travel: number;
+  food: number;
+  otherCosts: number;
+};
+
 export type BudgetState = {
   id: string;
   projectId: string;
@@ -66,6 +80,7 @@ export type BudgetState = {
   briefing: BriefingData;
   sections: Record<BudgetSectionKey, BudgetLine[]>;
   settings: BudgetSettings;
+  simple: SimpleBudgetData;
   updatedAt: string;
 };
 

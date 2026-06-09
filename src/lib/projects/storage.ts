@@ -26,19 +26,19 @@ export function normalizeProjects(value: unknown): StudioProject[] {
   return value.map((item, index) => normalizeProject(item, index));
 }
 
-function normalizeProject(value: unknown, index: number): StudioProject {
+export function normalizeProject(value: unknown, index = 0): StudioProject {
   const project = value && typeof value === "object" ? value as Partial<StudioProject> : {};
   const now = new Date().toISOString();
   return {
-    id: project.id || `projeto-importado-${index}`,
-    title: project.title || "Projeto sem nome",
-    client: project.client || "",
+    id: typeof project.id === "string" && project.id ? project.id : `projeto-importado-${index}`,
+    title: typeof project.title === "string" && project.title.trim() ? project.title : "Projeto sem nome",
+    client: typeof project.client === "string" ? project.client : "",
     status: projectStatuses.includes(project.status as StudioProject["status"]) ? project.status as StudioProject["status"] : "Ideia",
     priority: projectPriorities.includes(project.priority as StudioProject["priority"]) ? project.priority as StudioProject["priority"] : "Média",
-    deadline: project.deadline || "",
-    description: project.description || "",
+    deadline: typeof project.deadline === "string" ? project.deadline : "",
+    description: typeof project.description === "string" ? project.description : "",
     tags: Array.isArray(project.tags) ? project.tags.filter((tag): tag is string => typeof tag === "string") : [],
-    progress: typeof project.progress === "number" ? project.progress : 5,
+    progress: typeof project.progress === "number" && Number.isFinite(project.progress) ? Math.min(100, Math.max(0, project.progress)) : 5,
     preProduction: { ...exampleProject.preProduction, ...project.preProduction },
     createdAt: project.createdAt || now,
     updatedAt: project.updatedAt || now,

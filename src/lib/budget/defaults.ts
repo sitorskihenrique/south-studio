@@ -138,6 +138,19 @@ export function createDefaultBudget(id = "novo-orcamento"): BudgetState {
       installments: 2,
       installmentRatePercent: 1.59,
     },
+    simple: {
+      chargeType: "Por diária",
+      preProductionHours: 0,
+      filmingHours: 0,
+      editingHours: 0,
+      hourlyRate: 60,
+      dayCount: 1,
+      dayRate: 600,
+      equipment: 0,
+      travel: 0,
+      food: 0,
+      otherCosts: 0,
+    },
     updatedAt: "",
   };
 }

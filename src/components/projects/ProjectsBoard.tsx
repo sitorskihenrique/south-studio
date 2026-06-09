@@ -4,9 +4,9 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, CalendarClock, CheckSquare2, Film, FolderPlus, Pencil, Plus, Search, SlidersHorizontal, WalletCards } from "lucide-react";
 import { emptyProjectDraft } from "@/lib/projects/defaults";
-import { normalizeProjects, progressForStatus, readProjects, writeProjects } from "@/lib/projects/storage";
+import { normalizeProject, normalizeProjects, progressForStatus, readProjects, writeProjects } from "@/lib/projects/storage";
 import { projectStatuses, type ProjectDetailTab, type ProjectDraft, type ProjectStatus, type StudioProject } from "@/lib/projects/types";
-import { readCloudItems, upsertCloudItem } from "@/lib/supabase/data";
+import { deleteCloudItem, readCloudItems, upsertCloudItem } from "@/lib/supabase/data";
 import { ProjectDetailModal } from "./ProjectDetailModal";
 import { ProjectFormModal } from "./ProjectFormModal";
 import { readTasks } from "@/lib/tasks/storage";
@@ -60,21 +60,27 @@ export function ProjectsBoard() {
 
   const visibleProjects = useMemo(() => {
     const normalized = search.trim().toLocaleLowerCase("pt-BR");
-    return projects.filter((project) => {
+    return projects.map((project, index) => normalizeProject(project, index)).filter((project) => {
       const matchesSearch = !normalized || `${project.title} ${project.client} ${project.tags.join(" ")}`.toLocaleLowerCase("pt-BR").includes(normalized);
       return matchesSearch && (status === "Todos" || project.status === status);
     });
   }, [projects, search, status]);
 
-  function persist(project: StudioProject, success: string) {
-    const next = projects.some((item) => item.id === project.id) ? projects.map((item) => item.id === project.id ? project : item) : [project, ...projects];
-    setProjects(next);
-    writeProjects(next);
-    setActiveProject((current) => current?.id === project.id ? project : current);
-    setMessage(success);
-    upsertCloudItem("projects", project, project.title).then((result) => {
+  async function persist(project: StudioProject, success: string) {
+    try {
+      const normalized = normalizeProject(project);
+      const next = projects.some((item) => item.id === normalized.id) ? projects.map((item) => item.id === normalized.id ? normalized : item) : [normalized, ...projects];
+      if (!writeProjects(next)) throw new Error("localStorage unavailable");
+      setProjects(next);
+      setActiveProject((current) => current?.id === normalized.id ? normalized : current);
+      setMessage(success);
+      const result = await upsertCloudItem("projects", normalized, normalized.title);
       if (result.authenticated && !result.ok) setMessage(`${success} Sincronização pendente.`);
-    });
+      return true;
+    } catch {
+      setMessage("Não foi possível criar o projeto. Tente novamente.");
+      return false;
+    }
   }
 
   function openCreate() {
@@ -92,24 +98,24 @@ export function ProjectsBoard() {
     setFormOpen(true);
   }
 
-  function submitProject() {
-    const title = draft.title.trim();
+  async function submitProject() {
+    const title = String(draft.title || "").trim();
     if (!title) return setMessage("Informe o nome do projeto.");
     const previous = projects.find((project) => project.id === editingId);
     const now = new Date().toISOString();
     const project: StudioProject = {
       ...draft,
       title,
-      client: draft.client.trim(),
-      tags: tagsText.split(",").map((tag) => tag.trim()).filter(Boolean).slice(0, 12),
+      client: String(draft.client || "").trim(),
+      tags: String(tagsText || "").split(",").map((tag) => tag.trim()).filter(Boolean).slice(0, 12),
       progress: progressForStatus(draft.status, previous?.progress),
       id: previous?.id || crypto.randomUUID(),
       createdAt: previous?.createdAt || now,
       updatedAt: now,
       related: previous?.related || { taskIds: [], budgetIds: [], filmPlanIds: [] },
     };
-    persist(project, previous ? "Projeto atualizado." : "Projeto criado.");
-    setFormOpen(false);
+    const saved = await persist(project, previous ? "Projeto atualizado." : "Projeto criado.");
+    if (saved) setFormOpen(false);
   }
 
   function openProject(project: StudioProject, tab: ProjectDetailTab = "Visão geral") {
@@ -120,6 +126,20 @@ export function ProjectsBoard() {
   function savePreProduction() {
     if (!activeProject) return;
     persist({ ...activeProject, updatedAt: new Date().toISOString() }, "Pré-produção salva.");
+  }
+
+  async function deleteProject(project: StudioProject) {
+    if (!window.confirm(`Excluir o projeto "${project.title}"? Os itens vinculados serão mantidos.`)) return;
+    try {
+      const next = projects.filter((item) => item.id !== project.id);
+      if (!writeProjects(next)) throw new Error("localStorage unavailable");
+      setProjects(next);
+      setActiveProject(null);
+      const result = await deleteCloudItem("projects", project.id);
+      setMessage(result.authenticated && !result.ok ? "Projeto removido deste dispositivo. Sincronização pendente." : "Projeto excluído.");
+    } catch {
+      setMessage("Não foi possível excluir o projeto. Tente novamente.");
+    }
   }
 
   return (
@@ -151,7 +171,7 @@ export function ProjectsBoard() {
       </div>
 
       <ProjectFormModal open={formOpen} editing={Boolean(editingId)} draft={draft} tagsText={tagsText} onChange={setDraft} onTagsChange={setTagsText} onClose={() => setFormOpen(false)} onSubmit={submitProject} />
-      <ProjectDetailModal project={activeProject} tasks={tasks.filter((item) => item.projectId === activeProject?.id)} budgets={budgets.filter((item) => (item.projectId || item.budget?.projectId) === activeProject?.id)} plans={plans.filter((item) => (item.projectId || item.plan?.projectId) === activeProject?.id)} activeTab={detailTab} onTabChange={setDetailTab} onChange={setActiveProject} onSave={savePreProduction} onEdit={() => activeProject && openEdit(activeProject)} onClose={() => setActiveProject(null)} />
+      <ProjectDetailModal project={activeProject} tasks={tasks.filter((item) => item?.projectId === activeProject?.id)} budgets={budgets.filter((item) => (item?.projectId || item?.budget?.projectId) === activeProject?.id)} plans={plans.filter((item) => (item?.projectId || item?.plan?.projectId) === activeProject?.id)} activeTab={detailTab} onTabChange={setDetailTab} onChange={setActiveProject} onSave={savePreProduction} onEdit={() => activeProject && openEdit(activeProject)} onDelete={() => activeProject && deleteProject(activeProject)} onClose={() => setActiveProject(null)} />
     </section>
   );
 }

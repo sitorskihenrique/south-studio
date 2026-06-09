@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, CalendarClock, CheckSquare2, FileImage, LayoutDashboard, Pencil, Save, WalletCards, X } from "lucide-react";
+import { ArrowRight, CalendarClock, CheckSquare2, FileImage, LayoutDashboard, Pencil, Save, Trash2, WalletCards, X } from "lucide-react";
 import { Field, TextArea } from "@/components/budget/BudgetFields";
 import { type ProjectDetailTab, type StudioProject } from "@/lib/projects/types";
 import type { StudioTask } from "@/lib/tasks/types";
@@ -21,6 +21,7 @@ export function ProjectDetailModal({
   onChange,
   onSave,
   onEdit,
+  onDelete,
   onClose,
 }: {
   project: StudioProject | null;
@@ -32,6 +33,7 @@ export function ProjectDetailModal({
   onChange: (project: StudioProject) => void;
   onSave: () => void;
   onEdit: () => void;
+  onDelete: () => void;
   onClose: () => void;
 }) {
   if (!project) return null;
@@ -43,6 +45,7 @@ export function ProjectDetailModal({
             <div className="min-w-0"><p className="text-xs font-semibold uppercase text-zinc-400">{project.client || "Cliente não informado"}</p><h2 className="mt-2 truncate text-2xl font-semibold text-zinc-950 sm:text-4xl">{project.title}</h2></div>
             <div className="flex gap-2">
               <button type="button" onClick={onEdit} aria-label="Editar projeto" className="grid h-11 w-11 place-items-center rounded-full border border-zinc-200 text-zinc-600"><Pencil size={18} /></button>
+              <button type="button" onClick={onDelete} aria-label="Excluir projeto" className="grid h-11 w-11 place-items-center rounded-full border border-red-200 text-red-600"><Trash2 size={17} /></button>
               <button type="button" onClick={onClose} aria-label="Fechar detalhe do projeto" className="grid h-11 w-11 place-items-center rounded-full bg-zinc-950 text-white"><X size={18} /></button>
             </div>
           </div>
@@ -74,7 +77,7 @@ function Overview({ project, tasks, budgets, plans }: { project: StudioProject; 
       </section>
       <section className="studio-card rounded-[28px] p-5 sm:p-7">
         <p className="text-xs font-semibold uppercase text-zinc-400">Informações</p>
-        <dl className="mt-5 space-y-4 text-sm"><Info label="Status" value={project.status} /><Info label="Prioridade" value={project.priority} /><Info label="Prazo" value={formatDate(project.deadline)} /><Info label="Tags" value={project.tags.join(", ") || "Sem tags"} /></dl>
+        <dl className="mt-5 space-y-4 text-sm"><Info label="Status" value={project.status || "Ideia"} /><Info label="Prioridade" value={project.priority || "Média"} /><Info label="Prazo" value={formatDate(project.deadline)} /><Info label="Tags" value={(project.tags || []).join(", ") || "Sem tags"} /></dl>
       </section>
     </div>
   );
@@ -103,7 +106,7 @@ function PreProduction({ project, onChange, onSave }: { project: StudioProject; 
   return (
     <section className="studio-card rounded-[28px] p-5 sm:p-7">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><p className="text-xs font-semibold uppercase text-zinc-400">Pré-produção</p><h3 className="mt-3 text-2xl font-semibold text-zinc-950">Planejamento inicial</h3></div><button type="button" onClick={onSave} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-zinc-950 px-5 text-sm font-semibold text-white"><Save size={17} />Salvar pré-produção</button></div>
-      <div className="mt-7 grid gap-4 md:grid-cols-2">{fields.map(([key, label, placeholder]) => <Field key={key} label={label}><TextArea value={project.preProduction[key]} onChange={(event) => update(key, event.target.value)} placeholder={placeholder} className="min-h-32" /></Field>)}</div>
+      <div className="mt-7 grid gap-4 md:grid-cols-2">{fields.map(([key, label, placeholder]) => <Field key={key} label={label}><TextArea value={project.preProduction?.[key] || ""} onChange={(event) => update(key, event.target.value)} placeholder={placeholder} className="min-h-32" /></Field>)}</div>
     </section>
   );
 }

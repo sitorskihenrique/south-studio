@@ -71,6 +71,9 @@ export function createDefaultFilmPlan(id = "novo-plano"): FilmPlan {
     date: "",
     director: "",
     producer: "",
+    simpleLocation: "",
+    simpleNotes: "",
+    equipmentChecklist: ["Câmera", "Lente", "Tripé", "Luz", "Microfone", "Drone", "Estabilizador", "Cartão de memória", "Bateria extra"].map((label, index) => ({ id: `equipamento-${index + 1}`, label, checked: false, custom: false })),
     scripts: id === "novo-plano"
       ? [createInitialScriptBlock("novo-plano-roteiro-1"), createInitialScriptBlock("novo-plano-roteiro-2")]
       : [createScriptBlock(), createScriptBlock()],

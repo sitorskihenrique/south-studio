@@ -60,6 +60,13 @@ export type ScriptBlock = {
   cta: string;
 };
 
+export type EquipmentChecklistItem = {
+  id: string;
+  label: string;
+  checked: boolean;
+  custom: boolean;
+};
+
 export type FilmPlan = {
   id: string;
   projectId: string;
@@ -72,6 +79,9 @@ export type FilmPlan = {
   date: string;
   director: string;
   producer: string;
+  simpleLocation: string;
+  simpleNotes: string;
+  equipmentChecklist: EquipmentChecklistItem[];
   scripts: ScriptBlock[];
   days: FilmDay[];
   activeDayId: string;
