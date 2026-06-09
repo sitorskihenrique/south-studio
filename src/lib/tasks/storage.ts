@@ -25,7 +25,10 @@ export function writeTasks(tasks: StudioTask[]) {
 
 export function normalizeTasks(value: unknown): StudioTask[] {
   if (!Array.isArray(value)) return defaultTasks;
-  return value.map((task, index) => normalizeTask(task, index));
+  const tasks = value
+    .map((task, index) => normalizeTask(task, index))
+    .filter((task) => !["tarefa-inicial-1", "tarefa-inicial-2", "tarefa-inicial-3"].includes(task.id));
+  return tasks.length ? tasks : defaultTasks;
 }
 
 export function normalizeTask(value: unknown, index = 0): StudioTask {

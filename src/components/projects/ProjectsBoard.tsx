@@ -1,206 +1,173 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
-import { ArrowRight, CalendarClock, CheckSquare2, CircleDot, Film, Search, SlidersHorizontal, WalletCards } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ArrowRight, CalendarClock, CheckSquare2, Film, FolderPlus, Pencil, Plus, Search, SlidersHorizontal, WalletCards } from "lucide-react";
+import { emptyProjectDraft } from "@/lib/projects/defaults";
+import { normalizeProjects, progressForStatus, readProjects, writeProjects } from "@/lib/projects/storage";
+import { projectStatuses, type ProjectDetailTab, type ProjectDraft, type ProjectStatus, type StudioProject } from "@/lib/projects/types";
+import { readCloudItems, upsertCloudItem } from "@/lib/supabase/data";
+import { ProjectDetailModal } from "./ProjectDetailModal";
+import { ProjectFormModal } from "./ProjectFormModal";
 
-type ProjectStatus = "Pré-produção" | "Produção" | "Pós" | "Entregue" | "Em espera";
-type ProjectPriority = "Alta" | "Média" | "Baixa";
-
-interface StudioProject {
-  id: string;
-  title: string;
-  client: string;
-  status: ProjectStatus;
-  priority: ProjectPriority;
-  deadline: string;
-  progress: number;
-  team: string;
-  budget: string;
-  tasks: number;
-  tags: string[];
-}
-
-const statuses: Array<"Todos" | ProjectStatus> = ["Todos", "Pré-produção", "Produção", "Pós", "Entregue", "Em espera"];
-
-const projects: StudioProject[] = [
-  {
-    id: "brand-film",
-    title: "Brand Film Inverno",
-    client: "Noma Studio",
-    status: "Produção",
-    priority: "Alta",
-    deadline: "18 jun",
-    progress: 62,
-    team: "6 pessoas",
-    budget: "R$ 48k",
-    tasks: 14,
-    tags: ["Campanha", "Set externo", "Hero"],
-  },
-  {
-    id: "social-launch",
-    title: "Lançamento Social",
-    client: "Casa Aster",
-    status: "Pré-produção",
-    priority: "Média",
-    deadline: "24 jun",
-    progress: 34,
-    team: "4 pessoas",
-    budget: "R$ 18k",
-    tasks: 9,
-    tags: ["Reels", "Produto", "Estúdio"],
-  },
-  {
-    id: "documentary",
-    title: "Mini doc fundador",
-    client: "Vértice",
-    status: "Pós",
-    priority: "Alta",
-    deadline: "02 jul",
-    progress: 78,
-    team: "3 pessoas",
-    budget: "R$ 32k",
-    tasks: 7,
-    tags: ["Entrevista", "Documental", "Cor"],
-  },
-  {
-    id: "monthly-content",
-    title: "Conteúdo mensal",
-    client: "South Lab",
-    status: "Em espera",
-    priority: "Baixa",
-    deadline: "A definir",
-    progress: 18,
-    team: "2 pessoas",
-    budget: "R$ 12k",
-    tasks: 5,
-    tags: ["Always on", "Social", "Retainer"],
-  },
-];
+const statuses: Array<"Todos" | ProjectStatus> = ["Todos", ...projectStatuses];
 
 const statusStyle: Record<ProjectStatus, string> = {
+  Ideia: "bg-white/10 text-white",
   "Pré-produção": "bg-sky-50 text-sky-700",
-  Produção: "bg-zinc-950 text-white",
-  Pós: "bg-amber-50 text-amber-800",
-  Entregue: "bg-emerald-50 text-emerald-700",
+  Produção: "bg-white text-zinc-950",
+  "Pós-produção": "bg-amber-50 text-amber-800",
   "Em espera": "bg-zinc-100 text-zinc-600",
+  Entregue: "bg-emerald-50 text-emerald-700",
 };
 
 export function ProjectsBoard() {
+  const [projects, setProjects] = useState<StudioProject[]>([]);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<(typeof statuses)[number]>("Todos");
+  const [formOpen, setFormOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [draft, setDraft] = useState<ProjectDraft>({ ...emptyProjectDraft, preProduction: { ...emptyProjectDraft.preProduction } });
+  const [tagsText, setTagsText] = useState("");
+  const [activeProject, setActiveProject] = useState<StudioProject | null>(null);
+  const [detailTab, setDetailTab] = useState<ProjectDetailTab>("Visão geral");
+  const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    let mounted = true;
+    setProjects(readProjects());
+    readCloudItems<StudioProject>("projects").then((result) => {
+      if (!mounted || !result.authenticated || !result.ok || !result.items.length) return;
+      setProjects(normalizeProjects(result.items));
+    });
+    return () => { mounted = false; };
+  }, []);
 
   const visibleProjects = useMemo(() => {
     const normalized = search.trim().toLocaleLowerCase("pt-BR");
     return projects.filter((project) => {
       const matchesSearch = !normalized || `${project.title} ${project.client} ${project.tags.join(" ")}`.toLocaleLowerCase("pt-BR").includes(normalized);
-      const matchesStatus = status === "Todos" || project.status === status;
-      return matchesSearch && matchesStatus;
+      return matchesSearch && (status === "Todos" || project.status === status);
     });
-  }, [search, status]);
+  }, [projects, search, status]);
+
+  function persist(project: StudioProject, success: string) {
+    const next = projects.some((item) => item.id === project.id) ? projects.map((item) => item.id === project.id ? project : item) : [project, ...projects];
+    setProjects(next);
+    writeProjects(next);
+    setActiveProject((current) => current?.id === project.id ? project : current);
+    setMessage(success);
+    upsertCloudItem("projects", project, project.title).then((result) => {
+      if (result.authenticated && !result.ok) setMessage(`${success} Sincronização pendente.`);
+    });
+  }
+
+  function openCreate() {
+    setEditingId(null);
+    setDraft({ ...emptyProjectDraft, preProduction: { ...emptyProjectDraft.preProduction } });
+    setTagsText("");
+    setFormOpen(true);
+  }
+
+  function openEdit(project: StudioProject) {
+    const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, related: _related, ...projectDraft } = project;
+    setEditingId(project.id);
+    setDraft(projectDraft);
+    setTagsText(project.tags.join(", "));
+    setFormOpen(true);
+  }
+
+  function submitProject() {
+    const title = draft.title.trim();
+    if (!title) return setMessage("Informe o nome do projeto.");
+    const previous = projects.find((project) => project.id === editingId);
+    const now = new Date().toISOString();
+    const project: StudioProject = {
+      ...draft,
+      title,
+      client: draft.client.trim(),
+      tags: tagsText.split(",").map((tag) => tag.trim()).filter(Boolean).slice(0, 12),
+      progress: progressForStatus(draft.status, previous?.progress),
+      id: previous?.id || crypto.randomUUID(),
+      createdAt: previous?.createdAt || now,
+      updatedAt: now,
+      related: previous?.related || { taskIds: [], budgetIds: [], filmPlanIds: [] },
+    };
+    persist(project, previous ? "Projeto atualizado." : "Projeto criado.");
+    setFormOpen(false);
+  }
+
+  function openProject(project: StudioProject, tab: ProjectDetailTab = "Visão geral") {
+    setActiveProject(project);
+    setDetailTab(tab);
+  }
+
+  function savePreProduction() {
+    if (!activeProject) return;
+    persist({ ...activeProject, updatedAt: new Date().toISOString() }, "Pré-produção salva.");
+  }
 
   return (
     <section className="h-full overflow-y-auto">
       <div className="mx-auto max-w-[1380px] px-4 py-5 sm:px-8 lg:px-10 lg:py-9 fade-in">
         <header className="studio-card rounded-[32px] p-6 sm:p-8 lg:p-10">
-          <div className="max-w-4xl">
-            <p className="text-xs font-semibold uppercase text-zinc-500">Projetos</p>
-            <h1 className="mt-5 text-4xl font-semibold text-zinc-950 sm:text-6xl">Toda produção por cliente.</h1>
-            <p className="mt-5 max-w-2xl text-base leading-7 text-zinc-500">Status, prazo, tarefas, orçamento e plano em uma visão clara para execução.</p>
+          <div className="flex flex-col justify-between gap-7 lg:flex-row lg:items-end">
+            <div className="max-w-4xl"><p className="text-xs font-semibold uppercase text-zinc-500">Projetos</p><h1 className="mt-5 text-4xl font-semibold text-zinc-950 sm:text-6xl">Toda produção em um só lugar.</h1><p className="mt-5 max-w-2xl text-base leading-7 text-zinc-500">Centralize visão geral, pré-produção, tarefas, orçamento e plano de filmagem.</p></div>
+            <button type="button" onClick={openCreate} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-zinc-950 px-5 text-sm font-semibold text-white"><Plus size={18} />Criar projeto</button>
           </div>
         </header>
 
         <div className="mt-5 grid gap-3 lg:grid-cols-[1fr_220px]">
-          <label className="relative">
-            <Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
-            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar projeto, cliente ou tag" className="min-h-12 w-full rounded-2xl border border-zinc-200 bg-white/82 pl-11 pr-4 text-sm outline-none transition focus:border-zinc-400 focus:ring-4 focus:ring-zinc-950/5" />
-          </label>
-          <label className="relative">
-            <SlidersHorizontal className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
-            <select value={status} onChange={(event) => setStatus(event.target.value as (typeof statuses)[number])} className="min-h-12 w-full rounded-2xl border border-zinc-200 bg-white/82 pl-11 pr-4 text-sm font-semibold text-zinc-700 outline-none transition focus:border-zinc-400">
-              {statuses.map((item) => <option key={item}>{item}</option>)}
-            </select>
-          </label>
+          <label className="relative"><Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={18} /><span className="sr-only">Buscar projeto</span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar projeto, cliente ou tag" className="min-h-12 w-full rounded-2xl border border-zinc-200 bg-white pl-11 pr-4 text-sm outline-none focus:border-zinc-400" /></label>
+          <label className="relative"><SlidersHorizontal className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={18} /><span className="sr-only">Filtrar projetos por status</span><select value={status} onChange={(event) => setStatus(event.target.value as (typeof statuses)[number])} className="min-h-12 w-full rounded-2xl border border-zinc-200 bg-white pl-11 pr-4 text-sm font-semibold text-zinc-700 outline-none">{statuses.map((item) => <option key={item}>{item}</option>)}</select></label>
         </div>
 
+        {message && <p className="mt-4 rounded-2xl bg-zinc-950 px-4 py-3 text-sm font-semibold text-white">{message}</p>}
+
         <div className="mt-5 grid gap-4 lg:grid-cols-2">
-          {visibleProjects.map((project) => (
-            <article key={project.id} className="studio-card overflow-hidden rounded-[30px]">
-              <div className="h-36 bg-zinc-950 p-4 text-white">
-                <div className="flex h-full items-start justify-between gap-3 rounded-[24px] bg-[radial-gradient(circle_at_26%_18%,rgba(255,255,255,0.32),transparent_18%),linear-gradient(135deg,rgba(255,255,255,0.12),rgba(255,255,255,0.02))] p-4">
-                  <span className={`rounded-full px-3 py-1 text-xs font-semibold ${statusStyle[project.status]}`}>{project.status}</span>
-                  <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-white/70">{project.priority}</span>
-                </div>
-              </div>
-              <div className="p-5 sm:p-6">
-                <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
-                  <div>
-                    <p className="text-sm font-semibold text-zinc-500">{project.client}</p>
-                    <h2 className="mt-1 text-2xl font-semibold tracking-tight text-zinc-950">{project.title}</h2>
-                  </div>
-                  <div className="rounded-2xl bg-zinc-100 px-3 py-2 text-right">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-400">Prazo</p>
-                    <p className="text-sm font-semibold text-zinc-800">{project.deadline}</p>
-                  </div>
-                </div>
-
-                <div className="mt-5">
-                  <div className="mb-2 flex items-center justify-between text-xs font-semibold text-zinc-500">
-                    <span>Progresso</span>
-                    <span>{project.progress}%</span>
-                  </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-zinc-100">
-                    <div className="h-full rounded-full bg-zinc-950" style={{ width: `${project.progress}%` }} />
-                  </div>
-                </div>
-
-                <div className="mt-5 grid grid-cols-3 gap-2">
-                  <Metric icon={CheckSquare2} label="Tarefas" value={String(project.tasks)} />
-                  <Metric icon={WalletCards} label="Orçamento" value={project.budget} />
-                  <Metric icon={Film} label="Equipe" value={project.team} />
-                </div>
-
-                <div className="mt-5 flex flex-wrap gap-2">
-                  {project.tags.map((tag) => <span key={tag} className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-semibold text-zinc-600">{tag}</span>)}
-                </div>
-
-                <div className="mt-6 grid gap-2 sm:grid-cols-3">
-                  <ToolLink href="/tarefas" label="Tarefas" icon={CheckSquare2} />
-                  <ToolLink href="/calculadora" label="Orçamento" icon={WalletCards} />
-                  <ToolLink href="/plano-de-filmagem" label="Plano" icon={CalendarClock} />
-                </div>
-              </div>
-            </article>
-          ))}
+          {visibleProjects.map((project) => <ProjectCard key={project.id} project={project} onOpen={() => openProject(project)} onEdit={() => openEdit(project)} onPreProduction={() => openProject(project, "Pré-produção")} />)}
         </div>
 
         {!visibleProjects.length && (
-          <div className="mt-5 rounded-[28px] border border-dashed border-zinc-300 bg-white/70 px-5 py-12 text-center">
-            <p className="text-base font-semibold text-zinc-800">Nenhum projeto encontrado.</p>
-            <p className="mt-2 text-sm text-zinc-500">Ajuste busca ou filtro para ver sua produção.</p>
+          <div className="mt-5 rounded-[28px] border border-dashed border-zinc-300 bg-white/70 px-5 py-14 text-center">
+            <FolderPlus className="mx-auto text-zinc-400" size={28} /><p className="mt-5 text-lg font-semibold text-zinc-800">Nenhum projeto criado ainda.</p><p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-zinc-500">Crie seu primeiro projeto para organizar orçamento, tarefas e plano de filmagem em um só lugar.</p><button type="button" onClick={openCreate} className="mt-6 inline-flex min-h-12 items-center gap-2 rounded-full bg-zinc-950 px-5 text-sm font-semibold text-white"><Plus size={17} />Criar projeto</button>
           </div>
         )}
       </div>
+
+      <ProjectFormModal open={formOpen} editing={Boolean(editingId)} draft={draft} tagsText={tagsText} onChange={setDraft} onTagsChange={setTagsText} onClose={() => setFormOpen(false)} onSubmit={submitProject} />
+      <ProjectDetailModal project={activeProject} activeTab={detailTab} onTabChange={setDetailTab} onChange={setActiveProject} onSave={savePreProduction} onEdit={() => activeProject && openEdit(activeProject)} onClose={() => setActiveProject(null)} />
     </section>
   );
 }
 
-function Metric({ icon: Icon, label, value }: { icon: typeof CircleDot; label: string; value: string }) {
+function ProjectCard({ project, onOpen, onEdit, onPreProduction }: { project: StudioProject; onOpen: () => void; onEdit: () => void; onPreProduction: () => void }) {
   return (
-    <div className="rounded-2xl bg-zinc-100/80 p-3">
-      <Icon size={16} className="text-zinc-500" />
-      <p className="mt-3 text-xs font-medium text-zinc-500">{label}</p>
-      <p className="mt-1 truncate text-sm font-semibold text-zinc-900">{value}</p>
-    </div>
+    <article className="studio-card overflow-hidden rounded-[30px]">
+      <div className="flex min-h-28 items-start justify-between gap-3 bg-zinc-950 p-5 text-white"><span className={`rounded-full px-3 py-1 text-xs font-semibold ${statusStyle[project.status]}`}>{project.status}</span><button type="button" onClick={onEdit} aria-label={`Editar ${project.title}`} className="grid h-11 w-11 place-items-center rounded-full bg-white/10 text-white"><Pencil size={17} /></button></div>
+      <div className="p-5 sm:p-6">
+        <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start"><div className="min-w-0"><p className="text-sm font-semibold text-zinc-500">{project.client || "Cliente não informado"}</p><h2 className="mt-1 break-words text-2xl font-semibold text-zinc-950">{project.title}</h2></div><div className="shrink-0 rounded-2xl bg-zinc-100 px-3 py-2 text-right"><p className="text-[11px] font-semibold uppercase text-zinc-400">Prazo</p><p className="text-sm font-semibold text-zinc-800">{formatDate(project.deadline)}</p></div></div>
+        <p className="mt-4 line-clamp-2 text-sm leading-6 text-zinc-500">{project.description || "Sem descrição breve."}</p>
+        <div className="mt-5"><div className="mb-2 flex justify-between text-xs font-semibold text-zinc-500"><span>Progresso · {project.priority}</span><span>{project.progress}%</span></div><div className="h-2 rounded-full bg-zinc-100"><div className="h-full rounded-full bg-zinc-950" style={{ width: `${project.progress}%` }} /></div></div>
+        <div className="mt-5 flex flex-wrap gap-2">{project.tags.map((tag) => <span key={tag} className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-semibold text-zinc-600">{tag}</span>)}</div>
+        <div className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-3">
+          <button type="button" onClick={onOpen} className="col-span-2 inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-zinc-950 px-3 text-sm font-semibold text-white sm:col-span-3">Abrir projeto <ArrowRight size={15} /></button>
+          <ToolLink href={`/tarefas?project=${project.id}`} label="Tarefas" icon={CheckSquare2} />
+          <ToolLink href={`/calculadora?project=${project.id}`} label="Orçamento" icon={WalletCards} />
+          <ToolLink href={`/plano-de-filmagem?project=${project.id}`} label="Plano" icon={CalendarClock} />
+          <button type="button" onClick={onPreProduction} className="col-span-2 inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl border border-zinc-200 px-3 text-sm font-semibold text-zinc-700 sm:col-span-3"><Film size={16} />Pré-produção</button>
+        </div>
+      </div>
+    </article>
   );
 }
 
-function ToolLink({ href, label, icon: Icon }: { href: string; label: string; icon: typeof CircleDot }) {
-  return (
-    <Link href={href} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl border border-zinc-200 bg-white px-3 text-sm font-semibold text-zinc-700 transition hover:border-zinc-950 hover:text-zinc-950">
-      <Icon size={16} />
-      {label}
-      <ArrowRight size={14} />
-    </Link>
-  );
+function ToolLink({ href, label, icon: Icon }: { href: string; label: string; icon: typeof Film }) {
+  return <Link href={href} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl border border-zinc-200 bg-white px-3 text-xs font-semibold text-zinc-700"><Icon size={15} />{label}</Link>;
+}
+
+function formatDate(value: string) {
+  if (!value) return "A definir";
+  const [year, month, day] = value.split("-").map(Number);
+  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short" }).format(new Date(year, month - 1, day));
 }

@@ -1,6 +1,6 @@
 import type { BudgetState, SavedBudget } from "./types";
 
-export const draftStorageKey = "south-studio-budget-calculator-v3";
+export const draftStorageKey = "south-studio-budget-calculator-v4";
 export const savedBudgetsStorageKey = "south-studio-saved-budgets-v1";
 
 export function readLocalStorage<T>(key: string, fallback: T): T {
@@ -43,4 +43,3 @@ export function upsertSavedBudget(items: SavedBudget[], item: SavedBudget) {
     ? items.map((budget) => (budget.id === item.id ? item : budget))
     : [item, ...items];
 }
-

@@ -36,6 +36,7 @@ export async function readCloudItems<T>(table: CloudTable): Promise<CloudResult<
   const { data, error } = await supabase
     .from(table)
     .select("id,title,data,updated_at")
+    .eq("user_id", user.id)
     .order("updated_at", { ascending: false });
 
   if (error) return { authenticated: true, ok: false, items: [], error: error.message };
@@ -75,6 +76,7 @@ export async function replaceCloudItems<T extends { id: string }>(table: CloudTa
     updated_at: new Date().toISOString(),
   }));
 
+  if (!rows.length) return { authenticated: true, ok: true };
   const { error } = await supabase.from(table).upsert(rows, { onConflict: "id,user_id" });
   return { authenticated: true, ok: !error, error: error?.message };
 }
