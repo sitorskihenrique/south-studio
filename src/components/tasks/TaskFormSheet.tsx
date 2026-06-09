@@ -56,7 +56,11 @@ export function TaskFormSheet({
             <div className="sm:col-span-2">
               <Field label="Título"><TextInput autoFocus required value={draft.title} placeholder="Ex.: Confirmar equipe da gravação" onChange={(event) => onChange({ ...draft, title: event.target.value })} /></Field>
             </div>
+            <div className="sm:col-span-2">
+              <Field label="Descrição"><TextArea value={draft.description} placeholder="Resumo direto do que precisa ser feito" onChange={(event) => onChange({ ...draft, description: event.target.value })} /></Field>
+            </div>
             <Field label="Dia da semana"><SelectInput value={draft.day} onChange={(event) => onChange({ ...draft, day: event.target.value as TaskDraft["day"] })}>{taskDays.map(option)}</SelectInput></Field>
+            <Field label="Data específica"><TextInput type="date" value={draft.specificDate} onChange={(event) => onChange({ ...draft, specificDate: event.currentTarget.value })} onInput={(event) => onChange({ ...draft, specificDate: event.currentTarget.value })} /></Field>
             <Field label="Categoria"><SelectInput value={draft.category} onChange={(event) => onChange({ ...draft, category: event.target.value as TaskDraft["category"] })}>{taskCategories.map(option)}</SelectInput></Field>
             <Field label="Prioridade"><SelectInput value={draft.priority} onChange={(event) => onChange({ ...draft, priority: event.target.value as TaskDraft["priority"] })}>{taskPriorities.map(option)}</SelectInput></Field>
             <Field label="Status"><SelectInput value={draft.status} onChange={(event) => onChange({ ...draft, status: event.target.value as TaskDraft["status"] })}>{taskStatuses.map(option)}</SelectInput></Field>

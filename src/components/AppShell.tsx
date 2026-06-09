@@ -49,9 +49,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="studio-shell min-h-[100dvh] text-zinc-950 lg:p-4 xl:p-5">
-      <div className="mx-auto flex min-h-[100dvh] w-full max-w-[1680px] flex-col bg-white/65 lg:min-h-[calc(100dvh-40px)] lg:flex-row lg:overflow-hidden lg:rounded-[32px] lg:border lg:border-zinc-200 lg:shadow-[0_18px_70px_rgba(15,15,15,0.08)]">
-        <header className="sticky top-0 z-50 border-b border-zinc-200/70 bg-white/94 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] lg:hidden">
+    <div className="studio-shell h-[100dvh] overflow-hidden text-zinc-950 lg:p-4 xl:p-5">
+      <div className="mx-auto flex h-full min-h-0 w-full max-w-[1680px] flex-col overflow-hidden bg-white/65 lg:flex-row lg:rounded-[32px] lg:border lg:border-zinc-200 lg:shadow-[0_18px_70px_rgba(15,15,15,0.08)]">
+        <header className="z-50 shrink-0 border-b border-zinc-200/70 bg-white/94 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] lg:hidden">
           <div className="flex items-center justify-between gap-3">
             <Link href="/dashboard" className="flex min-w-0 items-center gap-3">
               <BrandMark />
@@ -67,7 +67,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <InstallApp />
         </header>
 
-        <aside className="hidden w-[264px] shrink-0 flex-col border-r border-white/10 bg-zinc-950 px-4 py-5 text-white lg:flex">
+        <aside className="hidden h-full w-[264px] shrink-0 flex-col overflow-y-auto border-r border-white/10 bg-zinc-950 px-4 py-5 text-white lg:flex">
           <Link href="/dashboard" className="flex items-center gap-3 rounded-3xl px-2 py-2">
             <BrandMark />
             <span>
@@ -95,7 +95,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </aside>
 
-        <main className="min-w-0 flex-1 overflow-hidden">{children}</main>
+        <main className="min-h-0 min-w-0 flex-1 overflow-hidden">{children}</main>
 
         <nav className="z-[80] grid shrink-0 grid-cols-5 border-t border-zinc-200/70 bg-white/96 px-2 pb-[max(0.35rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-10px_34px_rgba(0,0,0,0.08)] lg:hidden">
           {navigation.map((item) => {

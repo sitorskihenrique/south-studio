@@ -56,14 +56,15 @@ export function TaskCard({
             </div>
           </div>
 
-          {task.notes && <p className="mt-3 break-words text-sm leading-6 text-zinc-600">{task.notes}</p>}
+          {task.description && <p className="mt-3 break-words text-sm leading-6 text-zinc-600">{task.description}</p>}
+          {task.notes && <p className="mt-2 break-words text-xs leading-5 text-zinc-400">{task.notes}</p>}
 
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <span className="inline-flex min-h-9 items-center gap-1.5 rounded-xl bg-zinc-100 px-3 text-xs font-semibold text-zinc-600">
               <Clock3 size={14} />{formatMinutes(getEstimatedMinutes(task))}
             </span>
             <span className="inline-flex min-h-9 items-center gap-1.5 px-1 text-xs font-medium text-zinc-400">
-              <CalendarDays size={14} />Criada em {formatCreatedAt(task.createdAt)}
+              <CalendarDays size={14} />{task.specificDate ? formatSpecificDate(task.specificDate) : task.day}
             </span>
             <label className="relative">
               <span className="sr-only">Mover tarefa para outro dia</span>
@@ -88,6 +89,7 @@ function TaskAction({ label, onClick, danger, children }: { label: string; onCli
   return <button type="button" onClick={onClick} aria-label={label} title={label} className={`grid h-11 w-11 place-items-center rounded-xl transition ${danger ? "text-zinc-400 hover:bg-red-50 hover:text-red-600" : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-950"}`}>{children}</button>;
 }
 
-function formatCreatedAt(value: string) {
-  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", timeZone: "America/Sao_Paulo" }).format(new Date(value));
+function formatSpecificDate(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short" }).format(new Date(year, month - 1, day));
 }

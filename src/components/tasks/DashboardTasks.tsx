@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, CheckSquare2, Clock3 } from "lucide-react";
 import { defaultTasks } from "@/lib/tasks/defaults";
 import { formatMinutes, getEstimatedMinutes, getTodayTaskDay } from "@/lib/tasks/filters";
-import { readTasks, tasksUpdatedEvent } from "@/lib/tasks/storage";
+import { normalizeTasks, readTasks, tasksUpdatedEvent } from "@/lib/tasks/storage";
 import { taskDays, type StudioTask } from "@/lib/tasks/types";
 import { readCloudItems } from "@/lib/supabase/data";
 
@@ -16,7 +16,7 @@ export function DashboardTasks() {
     const sync = () => {
       setTasks(readTasks());
       readCloudItems<StudioTask>("tasks").then((result) => {
-        if (result.authenticated && result.ok && result.items.length) setTasks(result.items);
+        if (result.authenticated && result.ok && result.items.length) setTasks(normalizeTasks(result.items));
       });
     };
     sync();
