@@ -11,6 +11,7 @@ import {
   taskTimeOptions,
   type TaskDraft,
 } from "@/lib/tasks/types";
+import { ProjectLinkField } from "@/components/projects/ProjectLinkField";
 
 export function TaskFormSheet({
   open,
@@ -53,6 +54,7 @@ export function TaskFormSheet({
 
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6">
           <div className="grid gap-4 sm:grid-cols-2">
+            <div className="sm:col-span-2"><ProjectLinkField value={draft.projectId} onChange={(projectId) => onChange({ ...draft, projectId })} /></div>
             <div className="sm:col-span-2">
               <Field label="Título"><TextInput autoFocus required value={draft.title} placeholder="Ex.: Confirmar equipe da gravação" onChange={(event) => onChange({ ...draft, title: event.target.value })} /></Field>
             </div>

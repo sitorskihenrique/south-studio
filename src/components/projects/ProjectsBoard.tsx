@@ -9,6 +9,12 @@ import { projectStatuses, type ProjectDetailTab, type ProjectDraft, type Project
 import { readCloudItems, upsertCloudItem } from "@/lib/supabase/data";
 import { ProjectDetailModal } from "./ProjectDetailModal";
 import { ProjectFormModal } from "./ProjectFormModal";
+import { readTasks } from "@/lib/tasks/storage";
+import type { StudioTask } from "@/lib/tasks/types";
+import { readLocalStorage, savedBudgetsStorageKey } from "@/lib/budget/storage";
+import type { SavedBudget } from "@/lib/budget/types";
+import { readFilmPlanStorage, savedFilmPlansKey } from "@/lib/film-plan/storage";
+import type { SavedFilmPlan } from "@/lib/film-plan/types";
 
 const statuses: Array<"Todos" | ProjectStatus> = ["Todos", ...projectStatuses];
 
@@ -32,14 +38,23 @@ export function ProjectsBoard() {
   const [activeProject, setActiveProject] = useState<StudioProject | null>(null);
   const [detailTab, setDetailTab] = useState<ProjectDetailTab>("Visão geral");
   const [message, setMessage] = useState("");
+  const [tasks, setTasks] = useState<StudioTask[]>([]);
+  const [budgets, setBudgets] = useState<SavedBudget[]>([]);
+  const [plans, setPlans] = useState<SavedFilmPlan[]>([]);
 
   useEffect(() => {
     let mounted = true;
     setProjects(readProjects());
+    setTasks(readTasks());
+    setBudgets(readLocalStorage<SavedBudget[]>(savedBudgetsStorageKey, []));
+    setPlans(readFilmPlanStorage<SavedFilmPlan[]>(savedFilmPlansKey, []));
     readCloudItems<StudioProject>("projects").then((result) => {
       if (!mounted || !result.authenticated || !result.ok || !result.items.length) return;
       setProjects(normalizeProjects(result.items));
     });
+    readCloudItems<StudioTask>("tasks").then((result) => { if (mounted && result.ok && result.items.length) setTasks(result.items); });
+    readCloudItems<SavedBudget>("budgets").then((result) => { if (mounted && result.ok && result.items.length) setBudgets(result.items); });
+    readCloudItems<SavedFilmPlan>("film_plans").then((result) => { if (mounted && result.ok && result.items.length) setPlans(result.items); });
     return () => { mounted = false; };
   }, []);
 
@@ -136,7 +151,7 @@ export function ProjectsBoard() {
       </div>
 
       <ProjectFormModal open={formOpen} editing={Boolean(editingId)} draft={draft} tagsText={tagsText} onChange={setDraft} onTagsChange={setTagsText} onClose={() => setFormOpen(false)} onSubmit={submitProject} />
-      <ProjectDetailModal project={activeProject} activeTab={detailTab} onTabChange={setDetailTab} onChange={setActiveProject} onSave={savePreProduction} onEdit={() => activeProject && openEdit(activeProject)} onClose={() => setActiveProject(null)} />
+      <ProjectDetailModal project={activeProject} tasks={tasks.filter((item) => item.projectId === activeProject?.id)} budgets={budgets.filter((item) => (item.projectId || item.budget?.projectId) === activeProject?.id)} plans={plans.filter((item) => (item.projectId || item.plan?.projectId) === activeProject?.id)} activeTab={detailTab} onTabChange={setDetailTab} onChange={setActiveProject} onSave={savePreProduction} onEdit={() => activeProject && openEdit(activeProject)} onClose={() => setActiveProject(null)} />
     </section>
   );
 }

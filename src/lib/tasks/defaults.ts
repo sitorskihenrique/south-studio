@@ -1,6 +1,7 @@
 import type { StudioTask, TaskDraft } from "./types";
 
 export const emptyTaskDraft: TaskDraft = {
+  projectId: "",
   title: "",
   description: "",
   category: "Trabalho",
@@ -16,6 +17,7 @@ export const emptyTaskDraft: TaskDraft = {
 export const defaultTasks: StudioTask[] = [
   {
     id: "tarefa-guia",
+    projectId: "",
     title: "Exemplo: crie sua primeira tarefa",
     description: "Use este card como guia. Edite o título, escolha um dia, categoria, prioridade e data específica.",
     category: "Trabalho",

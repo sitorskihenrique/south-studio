@@ -58,6 +58,7 @@ export type BudgetSettings = {
 
 export type BudgetState = {
   id: string;
+  projectId: string;
   projectName: string;
   status: BudgetStatus;
   createdAt: string;
@@ -70,6 +71,7 @@ export type BudgetState = {
 
 export type SavedBudget = {
   id: string;
+  projectId: string;
   projectName: string;
   clientName: string;
   createdAt: string;

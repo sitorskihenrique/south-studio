@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Eraser, FilePlus2, LayoutList, PencilLine, Save, SaveAll, Sparkles } from "lucide-react";
 import { calculateBudget, formatCurrency, sectionKeys } from "@/lib/budget/calculations";
 import { createDefaultBudget, sectionMeta } from "@/lib/budget/defaults";
@@ -19,8 +20,11 @@ import { BudgetSummary } from "./BudgetSummary";
 import { DrePanel, FinancialFlow, ProvisionAndPayment } from "./FinancialPanels";
 import { LineItemTable } from "./LineItemTable";
 import { budgetStatuses, SavedBudgetsView } from "./SavedBudgetsView";
+import { ProjectLinkField } from "@/components/projects/ProjectLinkField";
 
 export function BudgetCalculator() {
+  const searchParams = useSearchParams();
+  const initialProjectId = searchParams.get("project") || "";
   const [budget, setBudget] = useState<BudgetState>(() => createDefaultBudget());
   const [savedBudgets, setSavedBudgets] = useState<SavedBudget[]>([]);
   const [activeTab, setActiveTab] = useState<"create" | "saved">("create");
@@ -28,13 +32,15 @@ export function BudgetCalculator() {
   const [dirty, setDirty] = useState(false);
   const [saveStatus, setSaveStatus] = useState("Rascunho salvo localmente");
   const [storageLabel, setStorageLabel] = useState("Modo local");
+  const [mode, setMode] = useState<"essential" | "professional">("essential");
   const totals = useMemo(() => calculateBudget(budget), [budget]);
 
   useEffect(() => {
     let mounted = true;
     const draft = readLocalStorage<Partial<BudgetState> | null>(draftStorageKey, null);
     const saved = readLocalStorage<SavedBudget[]>(savedBudgetsStorageKey, []);
-    if (draft) setBudget(normalizeBudget(draft));
+    if (draft) setBudget(normalizeBudget({ ...draft, projectId: initialProjectId || draft.projectId }));
+    else if (initialProjectId) setBudget((current) => ({ ...current, projectId: initialProjectId }));
     setSavedBudgets(saved);
     setReady(true);
     readCloudItems<SavedBudget>("budgets").then((result) => {
@@ -47,7 +53,7 @@ export function BudgetCalculator() {
       if (result.ok && result.items.length) setSavedBudgets(result.items);
     });
     return () => { mounted = false; };
-  }, []);
+  }, [initialProjectId]);
 
   useEffect(() => {
     if (!ready) return;
@@ -80,7 +86,7 @@ export function BudgetCalculator() {
 
   function newBudget() {
     if (dirty && !window.confirm("Você tem alterações não salvas. Deseja continuar?")) return;
-    setBudget(createDefaultBudget(crypto.randomUUID()));
+    setBudget({ ...createDefaultBudget(crypto.randomUUID()), projectId: initialProjectId });
     setDirty(false);
     setSaveStatus("Novo orçamento iniciado");
     setActiveTab("create");
@@ -203,6 +209,7 @@ export function BudgetCalculator() {
               onClick={() => setActiveTab("saved")}
             />
           </div>
+          {activeTab === "create" && <div className="mt-3 flex w-full gap-1 rounded-2xl bg-zinc-100 p-1 sm:w-fit"><ModeButton active={mode === "essential"} label="Essencial" onClick={() => setMode("essential")} /><ModeButton active={mode === "professional"} label="Profissional · Premium em breve" onClick={() => setMode("professional")} /></div>}
         </header>
 
         {activeTab === "saved" ? (
@@ -222,7 +229,7 @@ export function BudgetCalculator() {
               storageLabel={storageLabel}
               updateBudget={updateBudget}
             />
-            <div className="mt-5 grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
+            {mode === "essential" ? <EssentialBudget budget={budget} totals={totals} updateBudget={updateBudget} updateSetting={updateSetting} /> : <div className="mt-5 grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
               <main className="order-2 space-y-5 xl:order-1">
                 <ClientCard budget={budget} updateBudget={updateBudget} />
                 <BriefingCard budget={budget} updateBudget={updateBudget} />
@@ -262,12 +269,22 @@ export function BudgetCalculator() {
                 </div>
               </main>
               <BudgetSummary budget={budget} totals={totals} />
-            </div>
+            </div>}
           </>
         )}
       </div>
     </section>
   );
+}
+
+function EssentialBudget({ budget, totals, updateBudget, updateSetting }: { budget: BudgetState; totals: ReturnType<typeof calculateBudget>; updateBudget: (updater: (current: BudgetState) => BudgetState) => void; updateSetting: (key: keyof BudgetState["settings"], value: number) => void }) {
+  const fields: Array<{ section: BudgetSectionKey; label: string }> = [{ section: "southProduction", label: "Gravação / diárias" }, { section: "postProduction", label: "Edição" }, { section: "equipment", label: "Equipamentos" }, { section: "travelCosts", label: "Deslocamento" }, { section: "teamCosts", label: "Alimentação" }];
+  const setSectionValue = (section: BudgetSectionKey, value: number) => updateBudget((current) => ({ ...current, sections: { ...current.sections, [section]: current.sections[section].map((line, index) => index === 0 ? { ...line, unitValue: value, quantity: value ? 1 : 0 } : line) } }));
+  return <div className="mt-5 grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px]"><main className="space-y-5"><section className="studio-card rounded-[28px] p-5 sm:p-7"><p className="text-xs font-semibold uppercase text-zinc-400">Orçamento essencial</p><h2 className="mt-3 text-2xl font-semibold">Uma proposta rápida e clara.</h2><div className="mt-6 grid gap-4 sm:grid-cols-2"><Field label="Nome do projeto"><TextInput value={budget.projectName} onChange={(event) => updateBudget((current) => ({ ...current, projectName: event.target.value }))} /></Field><Field label="Cliente"><TextInput value={budget.client.company} onChange={(event) => updateBudget((current) => ({ ...current, client: { ...current.client, company: event.target.value } }))} /></Field><div className="sm:col-span-2"><ProjectLinkField value={budget.projectId} onChange={(projectId) => updateBudget((current) => ({ ...current, projectId }))} /></div>{fields.map(({ section, label }) => <Field key={section} label={label}><NumberInput value={totals.sections[section]} onValueChange={(value) => setSectionValue(section, value)} /></Field>)}<Field label="Margem %"><NumberInput value={budget.settings.profitPercent} onValueChange={(value) => updateSetting("profitPercent", value)} /></Field><Field label="Imposto %"><NumberInput value={budget.settings.taxPercent} onValueChange={(value) => updateSetting("taxPercent", value)} /></Field></div></section></main><BudgetSummary budget={budget} totals={totals} /></div>;
+}
+
+function ModeButton({ active, label, onClick }: { active: boolean; label: string; onClick: () => void }) {
+  return <button type="button" onClick={onClick} className={`min-h-10 rounded-xl px-4 text-xs font-semibold transition ${active ? "bg-white text-zinc-950 shadow-sm" : "text-zinc-500"}`}>{label}</button>;
 }
 
 function EditingHeader({
@@ -285,6 +302,7 @@ function EditingHeader({
 }) {
   return (
     <div className="grid gap-4 rounded-3xl border border-zinc-200 bg-white p-4 shadow-sm sm:grid-cols-[minmax(0,1fr)_190px] sm:items-end">
+      <div className="sm:col-span-2"><ProjectLinkField value={budget.projectId} onChange={(projectId, project) => updateBudget((current) => ({ ...current, projectId, projectName: project && (!current.projectName || current.projectName === "Orçamento exemplo") ? project.title : current.projectName, client: project && !current.client.company ? { ...current.client, company: project.client } : current.client }))} /></div>
       <Field label={isSaved ? "Editando orçamento salvo" : "Nome do projeto"}>
         <TextInput
           value={budget.projectName}

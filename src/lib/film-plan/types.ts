@@ -62,6 +62,7 @@ export type ScriptBlock = {
 
 export type FilmPlan = {
   id: string;
+  projectId: string;
   projectName: string;
   client: string;
   agency: string;
@@ -80,6 +81,7 @@ export type FilmPlan = {
 
 export type SavedFilmPlan = {
   id: string;
+  projectId: string;
   projectName: string;
   client: string;
   date: string;
@@ -89,4 +91,3 @@ export type SavedFilmPlan = {
   updatedAt: string;
   plan: FilmPlan;
 };
-

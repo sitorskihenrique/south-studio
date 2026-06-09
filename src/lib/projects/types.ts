@@ -37,4 +37,4 @@ export type StudioProject = {
 };
 
 export type ProjectDraft = Omit<StudioProject, "id" | "createdAt" | "updatedAt" | "related">;
-export type ProjectDetailTab = "Visão geral" | "Pré-produção" | "Tarefas" | "Orçamento" | "Plano de Filmagem" | "Arquivos/Referências";
+export type ProjectDetailTab = "Visão geral" | "Pré-produção" | "Tarefas" | "Orçamentos" | "Planos de Filmagem" | "Arquivos/Referências";

@@ -25,6 +25,7 @@ export function createSavedBudget(budget: BudgetState, summary: SavedBudget["sum
   const now = new Date().toISOString();
   return {
     id: budget.id,
+    projectId: budget.projectId || "",
     projectName: budget.projectName.trim() || "Orçamento sem nome",
     clientName: budget.client.company.trim() || "Cliente não informado",
     createdAt: budget.createdAt || now,

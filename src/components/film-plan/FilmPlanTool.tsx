@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { CalendarPlus, Copy, Film, LayoutList, Plus, Save, Sparkles, Trash2 } from "lucide-react";
 import { Field, TextArea, TextInput } from "@/components/budget/BudgetFields";
 import { createDefaultFilmPlan, createFilmDay, createScriptBlock, createSequence } from "@/lib/film-plan/defaults";
@@ -12,10 +13,13 @@ import { PlanSection } from "./PlanSection";
 import { SavedFilmPlansView } from "./SavedFilmPlansView";
 import { SequenceBoard } from "./SequenceBoard";
 import { TimelineView } from "./TimelineView";
+import { ProjectLinkField } from "@/components/projects/ProjectLinkField";
 
 type View = "editor" | "timeline" | "saved";
 
 export function FilmPlanTool() {
+  const searchParams = useSearchParams();
+  const initialProjectId = searchParams.get("project") || "";
   const [plan, setPlan] = useState<FilmPlan>(() => createDefaultFilmPlan());
   const [savedPlans, setSavedPlans] = useState<SavedFilmPlan[]>([]);
   const [view, setView] = useState<View>("editor");
@@ -23,13 +27,15 @@ export function FilmPlanTool() {
   const [dirty, setDirty] = useState(false);
   const [message, setMessage] = useState("Rascunho salvo localmente");
   const [storageLabel, setStorageLabel] = useState("Modo local");
+  const [mode, setMode] = useState<"simple" | "complete">("simple");
 
   const activeDay = useMemo(() => plan.days.find((day) => day.id === plan.activeDayId) || plan.days[0], [plan]);
 
   useEffect(() => {
     let mounted = true;
     const draft = readFilmPlanStorage<Partial<FilmPlan> | null>(filmPlanDraftKey, null);
-    if (draft) setPlan(normalizePlan(draft));
+    if (draft) setPlan(normalizePlan({ ...draft, projectId: initialProjectId || draft.projectId }));
+    else if (initialProjectId) setPlan((current) => ({ ...current, projectId: initialProjectId }));
     setSavedPlans(readFilmPlanStorage<SavedFilmPlan[]>(savedFilmPlansKey, []));
     setReady(true);
     readCloudItems<SavedFilmPlan>("film_plans").then((result) => {
@@ -42,7 +48,7 @@ export function FilmPlanTool() {
       if (result.ok && result.items.length) setSavedPlans(result.items);
     });
     return () => { mounted = false; };
-  }, []);
+  }, [initialProjectId]);
 
   useEffect(() => {
     if (!ready) return;
@@ -65,7 +71,7 @@ export function FilmPlanTool() {
 
   function newPlan() {
     if (dirty && !window.confirm("Você tem alterações não salvas. Deseja continuar?")) return;
-    setPlan(createDefaultFilmPlan(crypto.randomUUID()));
+    setPlan({ ...createDefaultFilmPlan(crypto.randomUUID()), projectId: initialProjectId });
     setDirty(false);
     setMessage("Novo plano iniciado");
     setView("editor");
@@ -127,13 +133,14 @@ export function FilmPlanTool() {
             {view !== "saved" && <div className="flex flex-wrap gap-2"><Action icon={CalendarPlus} label="Novo plano" onClick={newPlan} /><Action icon={Save} label="Salvar plano" onClick={savePlan} primary /><Action icon={Copy} label="Duplicar" onClick={() => duplicate()} /></div>}
           </div>
           <div className="mt-6 flex w-full gap-1 overflow-x-auto rounded-2xl border border-zinc-200 bg-white p-1 sm:w-fit"><Tab icon={Film} label="Editor" active={view === "editor"} onClick={() => setView("editor")} /><Tab icon={LayoutList} label="Timeline" active={view === "timeline"} onClick={() => setView("timeline")} /><Tab icon={LayoutList} label={`Planos (${savedPlans.length})`} active={view === "saved"} onClick={() => setView("saved")} /></div>
+          {view === "editor" && <div className="mt-3 flex w-full gap-1 rounded-2xl bg-zinc-100 p-1 sm:w-fit"><Mode active={mode === "simple"} label="Plano simples" onClick={() => setMode("simple")} /><Mode active={mode === "complete"} label="Plano completo · Premium em breve" onClick={() => setMode("complete")} /></div>}
         </header>
 
         {view === "saved" ? <div className="mt-6"><SavedFilmPlansView plans={savedPlans} onOpen={openSaved} onDuplicate={(saved) => duplicate(saved.plan)} onDelete={deleteSaved} /></div> : (
           <div className="mt-5">
             <div className="mb-5 rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-xs font-medium text-zinc-500">{message} · {storageLabel}</div>
             <DaySelector plan={plan} update={update} />
-            {view === "timeline" ? <div className="mt-5"><TimelineView day={activeDay} /></div> : (
+            {view === "timeline" ? <div className="mt-5"><TimelineView day={activeDay} /></div> : mode === "simple" ? <SimplePlan plan={plan} day={activeDay} update={update} updateDay={updateDay} /> : (
               <div className="mt-5 grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
                 <main className="order-2 space-y-5 xl:order-1">
                   <ProjectInfo plan={plan} update={update} />
@@ -153,9 +160,18 @@ export function FilmPlanTool() {
   );
 }
 
+function SimplePlan({ plan, day, update, updateDay }: { plan: FilmPlan; day: FilmDay; update: (fn: (current: FilmPlan) => FilmPlan) => void; updateDay: (day: FilmDay) => void }) {
+  const firstSequence = day.sequences[0];
+  return <div className="mt-5 grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px]"><main className="space-y-5"><PlanSection eyebrow="Plano simples" title="O essencial para a diária" description="Organize rapidamente a gravação e evolua para o plano completo quando precisar."><div className="grid gap-4 sm:grid-cols-2"><div className="sm:col-span-2"><ProjectLinkField value={plan.projectId} onChange={(projectId) => update((current) => ({ ...current, projectId }))} /></div><Field label="Nome do projeto"><TextInput value={plan.projectName} onChange={(event) => update((current) => ({ ...current, projectName: event.target.value }))} /></Field><Field label="Cliente"><TextInput value={plan.client} onChange={(event) => update((current) => ({ ...current, client: event.target.value }))} /></Field><Field label="Data da gravação"><TextInput type="date" value={day.date || plan.date} onChange={(event) => { update((current) => ({ ...current, date: event.target.value })); updateDay({ ...day, date: event.target.value }); }} /></Field><Field label="Local"><TextInput value={firstSequence?.takes[0]?.location || ""} onChange={(event) => updateDay({ ...day, sequences: day.sequences.map((sequence, s) => s === 0 ? { ...sequence, takes: sequence.takes.map((take, t) => t === 0 ? { ...take, location: event.target.value } : take) } : sequence) })} /></Field><Field label="Início"><TextInput type="time" value={day.schedule.cameraOpen} onChange={(event) => updateDay({ ...day, schedule: { ...day.schedule, cameraOpen: event.target.value } })} /></Field><Field label="Fim"><TextInput type="time" value={day.schedule.dayEnd} onChange={(event) => updateDay({ ...day, schedule: { ...day.schedule, dayEnd: event.target.value } })} /></Field><Field label="Equipe principal"><TextInput value={plan.producer} onChange={(event) => update((current) => ({ ...current, producer: event.target.value }))} /></Field><Field label="Equipamentos principais"><TextInput value={firstSequence?.takes[0]?.equipment || ""} onChange={(event) => updateDay({ ...day, sequences: day.sequences.map((sequence, s) => s === 0 ? { ...sequence, takes: sequence.takes.map((take, t) => t === 0 ? { ...take, equipment: event.target.value } : take) } : sequence) })} /></Field><div className="sm:col-span-2"><Field label="Observações / shotlist simples"><TextArea value={firstSequence?.notes || ""} onChange={(event) => updateDay({ ...day, sequences: day.sequences.map((sequence, index) => index === 0 ? { ...sequence, notes: event.target.value } : sequence) })} /></Field></div></div></PlanSection></main><FilmPlanSummary plan={plan} /></div>;
+}
+
+function Mode({ active, label, onClick }: { active: boolean; label: string; onClick: () => void }) {
+  return <button type="button" onClick={onClick} className={`min-h-10 rounded-xl px-4 text-xs font-semibold transition ${active ? "bg-white text-zinc-950 shadow-sm" : "text-zinc-500"}`}>{label}</button>;
+}
+
 function ProjectInfo({ plan, update }: { plan: FilmPlan; update: (fn: (current: FilmPlan) => FilmPlan) => void }) {
   const fields: { key: keyof Pick<FilmPlan, "projectName" | "client" | "agency" | "duration" | "formats" | "weather" | "date" | "director" | "producer">; label: string; type?: string }[] = [{ key: "projectName", label: "Projeto" }, { key: "client", label: "Cliente" }, { key: "agency", label: "Agência" }, { key: "duration", label: "Duração" }, { key: "formats", label: "Formatos" }, { key: "weather", label: "Meteorologia" }, { key: "date", label: "Data", type: "date" }, { key: "director", label: "Diretor" }, { key: "producer", label: "Produtor" }];
-  return <PlanSection eyebrow="Projeto" title="Informações gerais" description="Dados centrais do plano, conforme o modelo operacional da South."><div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{fields.map((field) => <Field key={field.key} label={field.label}><TextInput type={field.type} value={plan[field.key]} onChange={(event) => update((current) => ({ ...current, [field.key]: event.target.value }))} /></Field>)}</div></PlanSection>;
+  return <PlanSection eyebrow="Projeto" title="Informações gerais" description="Dados centrais do plano, conforme o modelo operacional da South."><div className="mb-5"><ProjectLinkField value={plan.projectId} onChange={(projectId, project) => update((current) => ({ ...current, projectId, projectName: project && (!current.projectName || current.projectName === "Novo Plano de Filmagem") ? project.title : current.projectName, client: project && !current.client ? project.client : current.client }))} /></div><div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{fields.map((field) => <Field key={field.key} label={field.label}><TextInput type={field.type} value={plan[field.key]} onChange={(event) => update((current) => ({ ...current, [field.key]: event.target.value }))} /></Field>)}</div></PlanSection>;
 }
 
 function ScriptEditor({ scripts, onChange }: { scripts: ScriptBlock[]; onChange: (scripts: ScriptBlock[]) => void }) {

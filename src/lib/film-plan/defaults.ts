@@ -61,6 +61,7 @@ export function createDefaultFilmPlan(id = "novo-plano"): FilmPlan {
   const day = id === "novo-plano" ? createInitialFilmDay() : createFilmDay();
   return {
     id,
+    projectId: "",
     projectName: "Novo Plano de Filmagem",
     client: "",
     agency: "",

@@ -27,6 +27,7 @@ export function toSavedFilmPlan(plan: FilmPlan): SavedFilmPlan {
   const takes = normalized.days.flatMap((day) => day.sequences.flatMap((sequence) => sequence.takes));
   return {
     id: normalized.id,
+    projectId: normalized.projectId || "",
     projectName: normalized.projectName.trim() || "Plano sem nome",
     client: normalized.client.trim() || "Cliente não informado",
     date: normalized.date,
@@ -43,4 +44,3 @@ export function upsertFilmPlan(items: SavedFilmPlan[], item: SavedFilmPlan) {
     ? items.map((current) => (current.id === item.id ? item : current))
     : [item, ...items];
 }
-

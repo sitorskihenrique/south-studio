@@ -80,6 +80,7 @@ export function createEmptyLine(item = "Novo item"): BudgetLine {
 export function createDefaultBudget(id = "novo-orcamento"): BudgetState {
   return {
     id,
+    projectId: "",
     projectName: "Orçamento exemplo",
     status: "Rascunho",
     createdAt: "",

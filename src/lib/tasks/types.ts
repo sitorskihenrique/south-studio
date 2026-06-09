@@ -15,6 +15,7 @@ export type TaskCategoryFilter = "Todas" | TaskCategory;
 
 export interface StudioTask {
   id: string;
+  projectId: string;
   title: string;
   description: string;
   category: TaskCategory;

@@ -8,6 +8,7 @@ import type { User } from "@supabase/supabase-js";
 import { InstallApp } from "@/components/pwa/InstallApp";
 import { LoggedUserCard } from "@/components/auth/LoggedUserCard";
 import { createClient } from "@/lib/supabase/client";
+import { BetaNotice } from "@/components/BetaNotice";
 
 const navigation = [
   { href: "/dashboard", label: "Home", desktopLabel: "Dashboard", icon: LayoutDashboard },
@@ -96,6 +97,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </aside>
 
         <main className="min-h-0 min-w-0 flex-1 overflow-hidden">{children}</main>
+        <BetaNotice />
 
         <nav className="z-[80] grid shrink-0 grid-cols-5 border-t border-zinc-200/70 bg-white/96 px-2 pb-[max(0.35rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-10px_34px_rgba(0,0,0,0.08)] lg:hidden">
           {navigation.map((item) => {

@@ -35,6 +35,7 @@ export function normalizeTask(value: unknown, index = 0): StudioTask {
   const task = value && typeof value === "object" ? value as Partial<StudioTask> & { category?: string } : {};
   return {
     id: typeof task.id === "string" && task.id ? task.id : `tarefa-importada-${index}`,
+    projectId: typeof task.projectId === "string" ? task.projectId : "",
     title: typeof task.title === "string" ? task.title : "Tarefa sem título",
     description: typeof task.description === "string" ? task.description : "",
     category: normalizeCategory(task.category),

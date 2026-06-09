@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { CheckCheck, ListFilter, Plus, Search, Tags } from "lucide-react";
 import { emptyTaskDraft, defaultTasks } from "@/lib/tasks/defaults";
 import { filterTasks, getTodayTaskDay, taskSummary } from "@/lib/tasks/filters";
@@ -26,6 +27,8 @@ import { TaskWeekView } from "./TaskWeekView";
 const dayTabs: TaskDayFilter[] = ["Visão da Semana", "Hoje", ...taskDays, "Calendário", "Concluídas"];
 
 export function TaskTool() {
+  const searchParams = useSearchParams();
+  const initialProjectId = searchParams.get("project") || "";
   const [tasks, setTasks] = useState<StudioTask[]>(defaultTasks);
   const [selectedDay, setSelectedDay] = useState<TaskDayFilter>("Visão da Semana");
   const [selectedDate, setSelectedDate] = useState("");
@@ -34,7 +37,7 @@ export function TaskTool() {
   const [search, setSearch] = useState("");
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [draft, setDraft] = useState<TaskDraft>({ ...emptyTaskDraft, day: getTodayTaskDay() });
+  const [draft, setDraft] = useState<TaskDraft>({ ...emptyTaskDraft, projectId: initialProjectId, day: getTodayTaskDay() });
   const [message, setMessage] = useState("");
   const [storageLabel, setStorageLabel] = useState("Modo local");
 
@@ -69,7 +72,7 @@ export function TaskTool() {
   function openNewTask() {
     setEditingId(null);
     const day = taskDays.includes(selectedDay as TaskDay) ? selectedDay as TaskDay : getTodayTaskDay();
-    setDraft({ ...emptyTaskDraft, day, specificDate: selectedDay === "Calendário" ? selectedDate : "" });
+    setDraft({ ...emptyTaskDraft, projectId: initialProjectId, day, specificDate: selectedDay === "Calendário" ? selectedDate : "" });
     setSheetOpen(true);
   }
 
