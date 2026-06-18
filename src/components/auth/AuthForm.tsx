@@ -6,8 +6,8 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { setActiveStorageUser } from "@/lib/storage/scope";
-import { brand } from "@/lib/brand";
 import { LocalizedBrandCopy } from "@/components/LocalizedBrandCopy";
+import { BrandLogo } from "@/components/ui/BrandLogo";
 
 type AuthMode = "login" | "cadastro";
 
@@ -82,50 +82,53 @@ export function AuthForm({ mode, nextPath = "/dashboard", missingConfig }: { mod
   }
 
   return (
-    <main className="min-h-[100dvh] bg-[#f5f6f8] p-4 text-[#121824] sm:p-6 lg:p-8">
-      <div className="mx-auto grid min-h-[calc(100dvh-2rem)] max-w-[1280px] overflow-hidden rounded-[32px] border border-white/80 bg-white/65 shadow-[0_24px_80px_rgba(18,24,36,0.10)] backdrop-blur-xl lg:min-h-[calc(100dvh-4rem)] lg:grid-cols-[1fr_0.9fr]">
-        <section className="flex min-h-[320px] flex-col justify-between bg-[#121824] p-7 text-white sm:p-10 lg:p-14">
-          <Link href="/" className="text-xl font-black">{brand.name}</Link>
-          <div className="max-w-2xl py-12">
-            <h1 className="text-4xl font-semibold leading-tight sm:text-6xl"><LocalizedBrandCopy /></h1>
-            <p className="mt-5 max-w-xl text-base leading-7 text-white/55"><LocalizedBrandCopy supporting /></p>
+    <main className="studio-auth-backdrop min-h-[100dvh] bg-black p-3 text-white sm:p-5">
+      <div className="studio-auth-liquid mx-auto grid min-h-[calc(100dvh-1.5rem)] max-w-[1480px] overflow-hidden rounded-[26px] border border-white/10 shadow-[0_32px_110px_rgba(0,0,0,0.55)] sm:min-h-[calc(100dvh-2.5rem)] sm:rounded-[32px] lg:grid-cols-[1fr_480px]">
+        <section className="hidden flex-col justify-between p-10 lg:flex lg:p-14">
+          <Link href="/"><BrandLogo className="w-[190px]" priority /></Link>
+          <div className="max-w-3xl py-14">
+            <h1 className="text-6xl font-medium leading-[0.98] xl:text-7xl"><LocalizedBrandCopy /></h1>
+            <p className="mt-6 max-w-xl text-base leading-7 text-white/50"><LocalizedBrandCopy supporting /></p>
           </div>
-          <p className="text-xs font-semibold uppercase text-white/35">Audiovisual workspace</p>
+          <span className="h-px w-16 bg-white/22" />
         </section>
 
-        <section className="flex flex-col p-6 sm:p-10 lg:p-14">
-          <nav className="flex justify-end gap-2">
-            <Link href={`/login?next=${encodeURIComponent(nextPath)}`} className={`rounded-full px-4 py-2 text-sm font-semibold ${isLogin ? "bg-[#121824] text-white" : "text-zinc-500"}`}>Login</Link>
-            <Link href={`/cadastro?next=${encodeURIComponent(nextPath)}`} className={`rounded-full px-4 py-2 text-sm font-semibold ${!isLogin ? "bg-[#121824] text-white" : "text-zinc-500"}`}>Cadastrar</Link>
-          </nav>
+        <section className="m-2 flex flex-col rounded-[22px] border border-white/12 bg-black/56 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-2xl sm:m-4 sm:p-8 lg:m-5 lg:p-9">
+          <div className="flex items-center justify-between gap-4 lg:justify-end">
+            <Link href="/" className="lg:hidden"><BrandLogo className="w-[132px]" priority /></Link>
+            <nav className="flex gap-1 rounded-full border border-white/10 bg-white/[0.04] p-1">
+              <Link href={`/login?next=${encodeURIComponent(nextPath)}`} className={`rounded-full px-4 py-2 text-sm font-semibold ${isLogin ? "bg-white text-[#0b0e15]" : "text-white/48"}`}>Login</Link>
+              <Link href={`/cadastro?next=${encodeURIComponent(nextPath)}`} className={`rounded-full px-4 py-2 text-sm font-semibold ${!isLogin ? "bg-white text-[#0b0e15]" : "text-white/48"}`}>Cadastrar</Link>
+            </nav>
+          </div>
 
           <div className="my-auto py-10">
-            <p className="text-xs font-bold uppercase text-zinc-400">{isLogin ? "Acesso" : "Nova conta"}</p>
-            <h2 className="mt-3 text-3xl font-semibold">{isLogin ? "Entre no seu workspace." : "Crie seu workspace."}</h2>
-            <p className="mt-3 text-sm leading-6 text-zinc-500">Projetos, tarefas, orçamentos e filmagens em um fluxo organizado.</p>
+            <p className="text-xs font-bold uppercase text-white/36">{isLogin ? "Acesso" : "Nova conta"}</p>
+            <h2 className="mt-3 text-3xl font-semibold text-white">{isLogin ? "Entre no seu workspace." : "Crie seu workspace."}</h2>
+            <p className="mt-3 text-sm leading-6 text-white/45">Organize projetos, tarefas, orçamentos e produção em um só lugar.</p>
 
-            <button type="button" onClick={signInWithGoogle} disabled={loading} className="mt-7 min-h-12 w-full rounded-xl border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-700 transition hover:border-zinc-300 hover:bg-zinc-50 disabled:opacity-60">
+            <button type="button" onClick={signInWithGoogle} disabled={loading} className="mt-7 min-h-12 w-full rounded-xl border border-white/14 bg-white/[0.07] px-4 text-sm font-semibold text-white transition hover:bg-white/[0.12] disabled:opacity-60">
               Continuar com Google
             </button>
 
-            <div className="my-6 flex items-center gap-3 text-xs font-medium text-zinc-400"><span className="h-px flex-1 bg-zinc-200" />ou use e-mail e senha<span className="h-px flex-1 bg-zinc-200" /></div>
+            <div className="my-6 flex items-center gap-3 text-xs font-medium text-white/30"><span className="h-px flex-1 bg-white/10" />ou use e-mail e senha<span className="h-px flex-1 bg-white/10" /></div>
 
             <form onSubmit={submit} className="space-y-4">
               {!isLogin && <AuthField label="Nome" value={name} onChange={setName} autoComplete="name" placeholder="Seu nome" />}
               <AuthField label="E-mail" type="email" value={email} onChange={setEmail} autoComplete="email" placeholder="voce@email.com" />
               <AuthField label="Senha" type="password" value={password} onChange={setPassword} autoComplete={isLogin ? "current-password" : "new-password"} placeholder="Mínimo 6 caracteres" />
 
-              {error && <p className="rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{error}</p>}
-              {message && <p className="rounded-xl bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">{message}</p>}
+              {error && <p className="rounded-xl border border-red-400/20 bg-red-400/10 px-4 py-3 text-sm font-medium text-red-200">{error}</p>}
+              {message && <p className="rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-sm font-medium text-emerald-200">{message}</p>}
 
-              <button type="submit" disabled={loading} className="min-h-12 w-full rounded-xl bg-[#121824] px-5 text-sm font-semibold text-white transition hover:bg-[#1a2333] disabled:opacity-60">
+              <button type="submit" disabled={loading} className="min-h-12 w-full rounded-xl bg-white px-5 text-sm font-semibold text-[#0b0e15] transition hover:bg-white/88 disabled:opacity-60">
                 {loading ? "Processando..." : isLogin ? "Login" : "Cadastrar"}
               </button>
             </form>
 
-            <p className="mt-6 text-center text-sm text-zinc-500">
+            <p className="mt-6 text-center text-sm text-white/42">
               {isLogin ? "Ainda não tem conta?" : "Já tem conta?"}{" "}
-              <Link href={alternateHref} className="font-semibold text-[#121824]">{isLogin ? "Cadastrar" : "Login"}</Link>
+              <Link href={alternateHref} className="font-semibold text-white">{isLogin ? "Cadastrar" : "Login"}</Link>
             </p>
           </div>
         </section>
@@ -137,8 +140,8 @@ export function AuthForm({ mode, nextPath = "/dashboard", missingConfig }: { mod
 function AuthField({ label, type = "text", value, onChange, autoComplete, placeholder }: { label: string; type?: string; value: string; onChange: (value: string) => void; autoComplete: string; placeholder: string }) {
   return (
     <label className="block">
-      <span className="mb-2 block text-sm font-medium text-zinc-700">{label}</span>
-      <input type={type} value={value} onChange={(event) => onChange(event.target.value)} className="min-h-12 w-full rounded-xl border border-zinc-200 bg-white px-4 text-base outline-none transition focus:border-[#121824] focus:ring-4 focus:ring-[#121824]/5" placeholder={placeholder} autoComplete={autoComplete} />
+      <span className="mb-2 block text-sm font-medium text-white/58">{label}</span>
+      <input type={type} value={value} onChange={(event) => onChange(event.target.value)} className="min-h-12 w-full rounded-xl border border-white/12 bg-white/[0.055] px-4 text-base text-white outline-none transition placeholder:text-white/28 focus:border-white/30 focus:bg-white/[0.08] focus:ring-4 focus:ring-white/5" placeholder={placeholder} autoComplete={autoComplete} />
     </label>
   );
 }

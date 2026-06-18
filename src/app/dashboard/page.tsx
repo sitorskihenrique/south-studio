@@ -1,5 +1,6 @@
+import { AppShell } from "@/components/AppShell";
 import { DashboardExperience } from "@/components/dashboard/DashboardExperience";
 
 export default function Dashboard() {
-  return <DashboardExperience />;
+  return <AppShell><DashboardExperience /></AppShell>;
 }

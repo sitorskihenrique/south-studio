@@ -27,8 +27,14 @@ function projectIdFor(item: unknown) {
 
 let userCache: { user: User | null; expiresAt: number } | null = null;
 let userRequest: Promise<User | null> | null = null;
+const itemsCache = new Map<CloudTable, { userId: string; items: unknown[]; expiresAt: number }>();
+const itemsRequests = new Map<CloudTable, Promise<CloudResult<unknown>>>();
 
 export function setCloudAuthUser(user: User | null) {
+  if (userCache?.user?.id !== user?.id) {
+    itemsCache.clear();
+    itemsRequests.clear();
+  }
   userCache = { user, expiresAt: Date.now() + 60_000 };
   userRequest = null;
 }
@@ -55,14 +61,28 @@ export async function readCloudItems<T>(table: CloudTable): Promise<CloudResult<
   const user = await getCurrentUser();
   if (!user) return { authenticated: false, ok: false, items: [] };
 
-  const { data, error } = await supabase
+  const cached = itemsCache.get(table);
+  if (cached && cached.userId === user.id && cached.expiresAt > Date.now()) {
+    return { authenticated: true, ok: true, items: cached.items as T[] };
+  }
+
+  const pending = itemsRequests.get(table);
+  if (pending) return pending as Promise<CloudResult<T>>;
+
+  const query = supabase
     .from(table)
     .select("id,title,data,updated_at")
     .eq("user_id", user.id)
     .order("updated_at", { ascending: false });
-
-  if (error) return { authenticated: true, ok: false, items: [], error: error.message };
-  return { authenticated: true, ok: true, items: ((data || []) as CloudRow<T>[]).map((row) => row.data) };
+  const request: Promise<CloudResult<unknown>> = Promise.resolve(query).then(({ data, error }) => {
+      itemsRequests.delete(table);
+      if (error) return { authenticated: true, ok: false, items: [], error: error.message };
+      const items = ((data || []) as CloudRow<unknown>[]).map((row) => row.data);
+      itemsCache.set(table, { userId: user.id, items, expiresAt: Date.now() + 15_000 });
+      return { authenticated: true, ok: true, items };
+    });
+  itemsRequests.set(table, request);
+  return request as Promise<CloudResult<T>>;
 }
 
 export async function upsertCloudItem<T extends { id: string }>(table: CloudTable, item: T, title?: string) {
@@ -81,6 +101,7 @@ export async function upsertCloudItem<T extends { id: string }>(table: CloudTabl
     updated_at: new Date().toISOString(),
   }, { onConflict: "id,user_id" });
 
+  if (!error) itemsCache.delete(table);
   return { authenticated: true, ok: !error, error: error?.message };
 }
 
@@ -116,8 +137,12 @@ export async function replaceCloudItems<T extends { id: string }>(
     }
   }
 
-  if (!rows.length) return { authenticated: true, ok: true };
+  if (!rows.length) {
+    itemsCache.delete(table);
+    return { authenticated: true, ok: true };
+  }
   const { error } = await supabase.from(table).upsert(rows, { onConflict: "id,user_id" });
+  if (!error) itemsCache.delete(table);
   return { authenticated: true, ok: !error, error: error?.message };
 }
 
@@ -129,5 +154,6 @@ export async function deleteCloudItem(table: CloudTable, id: string) {
   if (!user) return { authenticated: false, ok: false, error: "Usuário não autenticado." };
 
   const { error } = await supabase.from(table).delete().eq("id", id).eq("user_id", user.id);
+  if (!error) itemsCache.delete(table);
   return { authenticated: true, ok: !error, error: error?.message };
 }

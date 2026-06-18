@@ -1,10 +1,13 @@
-const CACHE_NAME = "cologne-os-assets-v1";
+const CACHE_NAME = "cologne-os-assets-v2";
 const PUBLIC_ASSETS = [
   "/manifest.json",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
   "/icons/icon-maskable-512.png",
-  "/icons/apple-touch-icon.png"
+  "/icons/apple-touch-icon.png",
+  "/brand/cologne-wordmark.webp",
+  "/brand/cologne-hero.webp",
+  "/brand/cologne-liquid.webp"
 ];
 
 self.addEventListener("install", (event) => {

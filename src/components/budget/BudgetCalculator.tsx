@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Eraser, FilePlus2, LayoutList, PencilLine, Save, SaveAll, Sparkles } from "lucide-react";
+import { Eraser, FilePlus2, LayoutList, PencilLine, Save, SaveAll } from "lucide-react";
 import { calculateBudget, formatCurrency, sectionKeys } from "@/lib/budget/calculations";
 import { createDefaultBudget, sectionMeta } from "@/lib/budget/defaults";
 import {
@@ -23,6 +23,7 @@ import { budgetStatuses, SavedBudgetsView } from "./SavedBudgetsView";
 import { ProjectLinkField } from "@/components/projects/ProjectLinkField";
 import { normalizeProjects, projectsStorageKey } from "@/lib/projects/storage";
 import type { StudioProject } from "@/lib/projects/types";
+import { ToolHeader } from "@/components/ui/ToolHeader";
 
 export function BudgetCalculator() {
   const searchParams = useSearchParams();
@@ -243,31 +244,20 @@ export function BudgetCalculator() {
   return (
     <section className="h-full overflow-y-auto">
       <div className="mx-auto max-w-[1340px] px-4 py-5 sm:px-8 lg:px-10 lg:py-9 fade-in">
-        <header className="studio-card mb-6 rounded-[32px] p-5 sm:p-7">
-          <div className="flex flex-col justify-between gap-5 xl:flex-row xl:items-end">
-            <div>
-              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-semibold text-zinc-500">
-                <Sparkles size={14} />
-                Clareza financeira
-              </div>
-              <h1 className="text-4xl font-semibold tracking-tight text-zinc-950 sm:text-6xl">
-                Calculadora de Orçamento
-              </h1>
-              <p className="mt-4 max-w-2xl text-sm leading-6 text-zinc-500 sm:text-base">
-                Menos planilha. Mais decisão. Precifique com margem, prazo e entrega em foco.
-              </p>
-            </div>
-            {activeTab === "create" && (
-              <div className="flex flex-wrap gap-2">
+        <ToolHeader
+          eyebrow="Financeiro"
+          title="Orçamentos"
+          description="Precifique com clareza, margem e prazo, sem transformar o processo em uma planilha."
+          actions={activeTab === "create" ? (
+            <>
                 <ActionButton icon={FilePlus2} label="Novo orçamento" onClick={newBudget} />
                 <ActionButton icon={Save} label="Salvar orçamento" onClick={saveNow} primary />
                 {!initialProjectId && <ActionButton icon={SaveAll} label="Salvar como novo" onClick={() => saveAsNew()} />}
                 <ActionButton icon={Eraser} label="Limpar cálculo" onClick={clearCalculation} />
-              </div>
-            )}
-          </div>
-
-          <div className="mt-6 flex w-full gap-1 rounded-2xl border border-zinc-200 bg-white p-1 sm:w-fit">
+            </>
+          ) : undefined}
+        >
+          <div className="mt-7 flex w-full gap-1 rounded-2xl border border-white/10 bg-white/[0.06] p-1 sm:w-fit">
             <TabButton
               active={activeTab === "create"}
               icon={PencilLine}
@@ -281,8 +271,8 @@ export function BudgetCalculator() {
               onClick={() => setActiveTab("saved")}
             />
           </div>
-          {activeTab === "create" && <div className="mt-3 flex w-full gap-1 rounded-2xl bg-zinc-100 p-1 sm:w-fit"><ModeButton active={mode === "essential"} label="Essencial" onClick={() => setMode("essential")} /><ModeButton active={mode === "professional"} label="Profissional" premium onClick={() => setMode("professional")} /></div>}
-        </header>
+          {activeTab === "create" && <div className="mt-3 flex w-full gap-1 rounded-2xl bg-white/[0.06] p-1 sm:w-fit"><ModeButton active={mode === "essential"} label="Essencial" onClick={() => setMode("essential")} /><ModeButton active={mode === "professional"} label="Profissional" premium onClick={() => setMode("professional")} /></div>}
+        </ToolHeader>
 
         {activeTab === "saved" ? (
           <SavedBudgetsView
@@ -465,7 +455,7 @@ function SimpleResult({ label, value }: { label: string; value: string }) {
 }
 
 function ModeButton({ active, label, premium = false, onClick }: { active: boolean; label: string; premium?: boolean; onClick: () => void }) {
-  return <button type="button" onClick={onClick} className={`inline-flex min-h-10 items-center gap-2 rounded-xl border border-transparent px-4 text-xs font-semibold transition ${premium ? "studio-premium" : active ? "bg-white text-zinc-950 shadow-sm" : "text-zinc-500"}`}>{label}{premium && <span className="studio-premium-badge rounded-full px-2 py-0.5 text-[9px] font-bold uppercase">Premium</span>}</button>;
+  return <button type="button" onClick={onClick} className={`inline-flex min-h-10 items-center gap-2 rounded-xl border border-transparent px-4 text-xs font-semibold transition ${premium ? "studio-premium" : active ? "bg-white text-[#0b0e15] shadow-sm" : "text-white/48"}`}>{label}{premium && <span className="studio-premium-badge rounded-full px-2 py-0.5 text-[9px] font-bold uppercase">Premium</span>}</button>;
 }
 
 function EditingHeader({
@@ -706,11 +696,7 @@ function ActionButton({
     <button
       type="button"
       onClick={onClick}
-      className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold transition ${
-        primary
-          ? "bg-zinc-950 text-white shadow-lg shadow-zinc-950/15 hover:bg-zinc-800"
-          : "border border-zinc-200 bg-white text-zinc-700 hover:border-violet-300 hover:text-violet-700"
-      }`}
+      className={`studio-dark-action ${primary ? "studio-dark-action--primary" : ""}`}
     >
       <Icon size={17} />
       {label}
@@ -734,7 +720,7 @@ function TabButton({
       type="button"
       onClick={onClick}
       className={`inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold transition sm:flex-none ${
-        active ? "bg-zinc-950 text-white" : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900"
+        active ? "bg-white text-[#0b0e15]" : "text-white/48 hover:bg-white/[0.06] hover:text-white"
       }`}
     >
       <Icon size={17} />

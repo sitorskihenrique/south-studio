@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { StudioSidebar } from "@/components/StudioSidebar";
 import { useAuthSession } from "@/components/auth/AuthSessionProvider";
 
@@ -7,15 +8,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { ready } = useAuthSession();
 
   return (
-    <div className="studio-app min-h-[100dvh] overflow-x-hidden bg-[#f5f6f8] text-zinc-950">
-      <div className="mx-auto grid min-h-[100dvh] w-full max-w-[1680px] gap-4 px-3 py-3 sm:px-5 sm:py-5 lg:grid-cols-[260px_minmax(0,1fr)] lg:gap-5 lg:px-6 lg:py-6">
-        <StudioSidebar />
-        <main className="min-h-0 min-w-0 overflow-hidden rounded-[28px] border border-white/70 bg-white/72 shadow-[0_22px_70px_rgba(16,24,40,0.08)] backdrop-blur-xl">
+    <div className="studio-app min-h-[100dvh] overflow-x-hidden bg-[#eceef2] text-zinc-950">
+      <div className="mx-auto grid min-h-[100dvh] w-full max-w-[1720px] gap-3 px-3 py-3 sm:gap-4 sm:px-5 sm:py-5 lg:grid-cols-[264px_minmax(0,1fr)] lg:gap-5 lg:px-6 lg:py-6">
+        <Suspense fallback={<SidebarLoading />}>
+          <StudioSidebar />
+        </Suspense>
+        <main className="min-h-0 min-w-0 overflow-hidden rounded-[26px] border border-white/70 bg-white/74 shadow-[0_26px_90px_rgba(10,14,24,0.10)] backdrop-blur-2xl sm:rounded-[30px]">
           {ready ? children : <AppLoading />}
         </main>
       </div>
     </div>
   );
+}
+
+function SidebarLoading() {
+  return <aside className="min-h-20 animate-pulse rounded-[26px] border border-white/80 bg-white/55 sm:rounded-[30px] lg:min-h-[calc(100dvh-3rem)]" />;
 }
 
 function AppLoading() {

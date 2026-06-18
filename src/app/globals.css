@@ -4,12 +4,14 @@
 
 :root {
   color-scheme: light;
-  --background: #f4f3f1;
-  --foreground: #141414;
-  --studio-navy: #121824;
-  --studio-navy-hover: #1a2333;
+  --background: #eceef2;
+  --foreground: #101218;
+  --studio-navy: #0b0e15;
+  --studio-navy-hover: #171b25;
   --studio-gold: #b88a3b;
   --studio-gold-soft: #f7eedb;
+  --studio-line: rgba(255, 255, 255, 0.1);
+  --studio-glass: rgba(255, 255, 255, 0.055);
 }
 
 * {
@@ -28,7 +30,7 @@ body {
   max-width: 100%;
   margin: 0;
   overflow-x: hidden;
-  background: #f4f3f0;
+  background: var(--background);
   color: var(--foreground);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, Helvetica, sans-serif;
 }
@@ -124,14 +126,94 @@ select {
 
 .studio-card {
   border: 1px solid rgba(24, 24, 27, 0.08);
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 12px 34px rgba(15, 15, 15, 0.045);
-  transition: border-color 150ms ease, background 150ms ease;
+  background: rgba(255, 255, 255, 0.84);
+  box-shadow: 0 14px 42px rgba(10, 14, 24, 0.055);
+  backdrop-filter: blur(18px);
+  transition: border-color 180ms ease, background 180ms ease, transform 180ms ease;
 }
 
 .studio-card:hover {
   border-color: rgba(24, 24, 27, 0.14);
-  background: #fff;
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.studio-tool-header {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 25% 0%, rgba(255, 255, 255, 0.08), transparent 34%),
+    linear-gradient(135deg, #07090d 0%, #0d111a 65%, #080a0f 100%);
+  padding: clamp(1.5rem, 3vw, 2.5rem);
+  box-shadow: 0 24px 70px rgba(9, 12, 20, 0.2);
+}
+
+.studio-tool-header__texture {
+  position: absolute;
+  inset: -30% -4% -35% auto;
+  z-index: -1;
+  width: min(34rem, 58%);
+  background: linear-gradient(90deg, #090c13 0%, transparent 42%), url("/brand/cologne-liquid.webp") center / cover no-repeat;
+  opacity: 0.46;
+  filter: saturate(0.7) contrast(1.08);
+  mask-image: linear-gradient(90deg, transparent, black 35%);
+}
+
+.studio-eyebrow {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.studio-dark-action {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 0.65rem 1rem;
+  color: white;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: background 180ms ease, border-color 180ms ease, transform 180ms ease;
+}
+
+.studio-dark-action:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 255, 255, 0.26);
+  background: rgba(255, 255, 255, 0.13);
+}
+
+.studio-dark-action--primary {
+  border-color: white;
+  background: white;
+  color: #0b0e15;
+}
+
+.studio-auth-backdrop {
+  background:
+    linear-gradient(180deg, rgba(2, 3, 5, 0.3), rgba(2, 3, 5, 0.8)),
+    url("/brand/cologne-hero.webp") center / cover no-repeat;
+}
+
+.studio-auth-liquid {
+  background:
+    linear-gradient(90deg, rgba(5, 7, 11, 0.96), rgba(5, 7, 11, 0.12)),
+    url("/brand/cologne-liquid.webp") right center / min(42vw, 34rem) 115% no-repeat;
+}
+
+@media (max-width: 768px) {
+  .studio-tool-header__texture {
+    inset: 0 -18% 0 auto;
+    width: 80%;
+    opacity: 0.3;
+  }
 }
 
 .cinematic-noise {

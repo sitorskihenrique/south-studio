@@ -13,16 +13,15 @@ import {
   Search,
 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
-import { createClient } from "@/lib/supabase/client";
 import { savedBudgetsStorageKey } from "@/lib/budget/storage";
 import type { SavedBudget } from "@/lib/budget/types";
 import { projectsStorageKey } from "@/lib/projects/storage";
 import type { StudioProject } from "@/lib/projects/types";
 import { tasksStorageKey } from "@/lib/tasks/storage";
 import type { StudioTask } from "@/lib/tasks/types";
-import { StudioSidebar } from "@/components/StudioSidebar";
 import { useAuthSession } from "@/components/auth/AuthSessionProvider";
 import { readScopedStorage } from "@/lib/storage/scope";
+import { readCloudItems } from "@/lib/supabase/data";
 
 type DashboardState = {
   user: User | null;
@@ -53,25 +52,24 @@ export function DashboardExperience() {
       };
       setState((current) => ({ ...current, user, ...localState, loading: true }));
 
-      const supabase = createClient();
-      if (!supabase || !user) {
+      if (!user) {
         if (alive) setState((current) => ({ ...current, loading: false }));
         return;
       }
 
       const [projectsResult, tasksResult, budgetsResult] = await Promise.all([
-        supabase.from("projects").select("data").eq("user_id", user.id).order("updated_at", { ascending: false }),
-        supabase.from("tasks").select("data").eq("user_id", user.id).order("updated_at", { ascending: false }),
-        supabase.from("budgets").select("data").eq("user_id", user.id).order("updated_at", { ascending: false }),
+        readCloudItems<StudioProject>("projects"),
+        readCloudItems<StudioTask>("tasks"),
+        readCloudItems<SavedBudget>("budgets"),
       ]);
 
       if (!alive) return;
 
       setState({
         user,
-        projects: resolveCloudData(projectsResult.data, projectsResult.error, localState.projects, cleanProjects),
-        tasks: resolveCloudData(tasksResult.data, tasksResult.error, localState.tasks, cleanTasks),
-        budgets: resolveCloudData(budgetsResult.data, budgetsResult.error, localState.budgets, cleanBudgets),
+        projects: resolveCloudData(projectsResult.items, projectsResult.ok, localState.projects, cleanProjects),
+        tasks: resolveCloudData(tasksResult.items, tasksResult.ok, localState.tasks, cleanTasks),
+        budgets: resolveCloudData(budgetsResult.items, budgetsResult.ok, localState.budgets, cleanBudgets),
         loading: false,
       });
     }
@@ -106,11 +104,8 @@ export function DashboardExperience() {
   ];
 
   return (
-    <main className="studio-app min-h-[100dvh] overflow-x-hidden bg-[#f5f6f8] text-zinc-950">
-      <div className="mx-auto grid min-h-[100dvh] w-full max-w-[1540px] gap-5 px-4 py-5 sm:px-6 lg:grid-cols-[280px_minmax(0,1fr)] lg:px-8 lg:py-10">
-        <StudioSidebar />
-
-        <section className="rounded-[30px] border border-white/10 bg-[#121824] p-5 text-white shadow-[0_28px_80px_rgba(15,23,42,0.26)] sm:p-8 lg:rounded-[34px] lg:p-12">
+    <section className="h-full overflow-y-auto p-3 sm:p-5 lg:p-6">
+      <div className="min-h-full rounded-[24px] border border-white/10 bg-[#090c13] p-5 text-white shadow-[0_28px_80px_rgba(8,12,20,0.24)] sm:p-8 lg:rounded-[28px] lg:p-12">
           <div className="mx-auto flex h-full max-w-[1040px] flex-col">
             <div className="pt-2 sm:pt-4 lg:pt-10">
               <p className="text-sm font-semibold uppercase text-white/35">Workspace audiovisual</p>
@@ -189,9 +184,8 @@ export function DashboardExperience() {
               </span>
             </div>
           </div>
-        </section>
       </div>
-    </main>
+    </section>
   );
 }
 
@@ -284,13 +278,9 @@ function safeMoney(value: unknown) {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
 
-function rowsData<T>(rows: Array<{ data?: unknown }> | null) {
-  return (rows || []).map((row) => row.data).filter((item): item is T => Boolean(item && typeof item === "object"));
-}
-
-function resolveCloudData<T>(rows: Array<{ data?: unknown }> | null, error: unknown, local: T[], clean: (items: T[]) => T[]) {
-  if (error) return local;
-  const cloud = clean(rowsData<T>(rows));
+function resolveCloudData<T>(items: T[], ok: boolean, local: T[], clean: (items: T[]) => T[]) {
+  if (!ok) return local;
+  const cloud = clean(items);
   return cloud.length ? cloud : local;
 }
 

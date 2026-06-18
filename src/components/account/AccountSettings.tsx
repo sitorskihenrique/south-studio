@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CloudUpload, LogOut, ShieldCheck, UserRound } from "lucide-react";
-import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { readLocalStorage, savedBudgetsStorageKey } from "@/lib/budget/storage";
 import type { SavedBudget } from "@/lib/budget/types";
@@ -13,18 +12,14 @@ import { readTasks } from "@/lib/tasks/storage";
 import type { StudioTask } from "@/lib/tasks/types";
 import { replaceCloudItems } from "@/lib/supabase/data";
 import { InstallApp } from "@/components/pwa/InstallApp";
+import { useAuthSession } from "@/components/auth/AuthSessionProvider";
+import { ToolHeader } from "@/components/ui/ToolHeader";
 
 export function AccountSettings() {
   const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
+  const { user } = useAuthSession();
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    const supabase = createClient();
-    if (!supabase) return;
-    supabase.auth.getUser().then(({ data }) => setUser(data.user));
-  }, []);
 
   async function signOut() {
     const supabase = createClient();
@@ -57,11 +52,11 @@ export function AccountSettings() {
   return (
     <section className="h-full overflow-y-auto">
       <div className="mx-auto max-w-5xl px-4 py-6 sm:px-8 lg:py-9">
-        <header>
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-zinc-500">Conta</p>
-          <h1 className="mt-2 text-4xl font-semibold tracking-tight text-zinc-950 sm:text-6xl">Configurações</h1>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-500">Gerencie seu acesso e leve os dados deste dispositivo para sua conta.</p>
-        </header>
+        <ToolHeader
+          eyebrow="Sistema"
+          title="Configurações"
+          description="Gerencie seu acesso, instalação e sincronização de dados com sua conta."
+        />
 
         <div className="mt-6 grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
           <section className="studio-card rounded-[28px] p-5">

@@ -23,6 +23,7 @@ import { TaskCard } from "./TaskCard";
 import { TaskFormSheet } from "./TaskFormSheet";
 import { TaskSummary } from "./TaskSummary";
 import { TaskWeekView } from "./TaskWeekView";
+import { ToolHeader } from "@/components/ui/ToolHeader";
 
 const dayTabs: TaskDayFilter[] = ["Visão da Semana", "Hoje", ...taskDays, "Calendário", "Concluídas"];
 
@@ -55,6 +56,10 @@ export function TaskTool() {
 
     return () => { mounted = false; };
   }, []);
+
+  useEffect(() => {
+    setSelectedDay(initialView === "calendar" ? "Calendário" : "Visão da Semana");
+  }, [initialView]);
 
   const visibleTasks = useMemo(() => filterTasks(tasks, selectedDay, status, category, search), [category, search, selectedDay, status, tasks]);
   const summary = taskSummary(tasks);
@@ -132,19 +137,12 @@ export function TaskTool() {
   return (
     <section className="h-full overflow-y-auto">
       <div className="mx-auto max-w-[1460px] px-4 py-5 sm:px-8 lg:px-10 lg:py-9 fade-in">
-        <header className="studio-card rounded-[32px] p-6 sm:p-8">
-          <div className="flex flex-col justify-between gap-6 sm:flex-row sm:items-end">
-            <div>
-              <p className="text-xs font-semibold uppercase text-zinc-500">Semana em movimento</p>
-              <h1 className="mt-4 text-4xl font-semibold text-zinc-950 sm:text-6xl">Tarefas</h1>
-              <p className="mt-4 max-w-2xl text-sm leading-6 text-zinc-500">{summary.todo} a fazer, {summary.progress} em progresso e {summary.completed} concluídas.</p>
-              <p className="mt-2 text-xs font-medium text-zinc-400">{storageLabel}</p>
-            </div>
-            <button type="button" onClick={openNewTask} className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-zinc-950 px-5 text-sm font-semibold text-white transition hover:bg-zinc-800 sm:w-fit">
-              <Plus size={18} />Nova tarefa
-            </button>
-          </div>
-        </header>
+        <ToolHeader
+          eyebrow="Produção"
+          title="Tarefas"
+          description={`${summary.todo} a fazer, ${summary.progress} em progresso e ${summary.completed} concluídas. ${storageLabel}.`}
+          actions={<button type="button" onClick={openNewTask} className="studio-dark-action studio-dark-action--primary w-full sm:w-auto"><Plus size={18} />Nova tarefa</button>}
+        />
 
         <div className="mt-6"><TaskSummary tasks={tasks} /></div>
 

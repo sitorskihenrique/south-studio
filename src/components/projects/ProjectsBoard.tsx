@@ -15,6 +15,7 @@ import { readLocalStorage, savedBudgetsStorageKey } from "@/lib/budget/storage";
 import type { SavedBudget } from "@/lib/budget/types";
 import { readFilmPlanStorage, savedFilmPlansKey } from "@/lib/film-plan/storage";
 import type { SavedFilmPlan } from "@/lib/film-plan/types";
+import { ToolHeader } from "@/components/ui/ToolHeader";
 
 const statuses: Array<"Todos" | ProjectStatus> = ["Todos", ...projectStatuses];
 
@@ -145,12 +146,12 @@ export function ProjectsBoard() {
   return (
     <section className="h-full overflow-y-auto">
       <div className="mx-auto max-w-[1380px] px-4 py-5 sm:px-8 lg:px-10 lg:py-9 fade-in">
-        <header className="studio-card rounded-[32px] p-6 sm:p-8 lg:p-10">
-          <div className="flex flex-col justify-between gap-7 lg:flex-row lg:items-end">
-            <div className="max-w-4xl"><p className="text-xs font-semibold uppercase text-zinc-500">Projetos</p><h1 className="mt-5 text-4xl font-semibold text-zinc-950 sm:text-6xl">Toda produção em um só lugar.</h1><p className="mt-5 max-w-2xl text-base leading-7 text-zinc-500">Centralize visão geral, pré-produção, tarefas, orçamento e plano de filmagem.</p></div>
-            <button type="button" onClick={openCreate} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-zinc-950 px-5 text-sm font-semibold text-white"><Plus size={18} />Criar projeto</button>
-          </div>
-        </header>
+        <ToolHeader
+          eyebrow="Workspace"
+          title="Projetos"
+          description="Centralize visão geral, pré-produção, tarefas, orçamento e plano de filmagem."
+          actions={<button type="button" onClick={openCreate} className="studio-dark-action studio-dark-action--primary"><Plus size={18} />Criar projeto</button>}
+        />
 
         <div className="mt-5 grid gap-3 lg:grid-cols-[1fr_220px]">
           <label className="relative"><Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={18} /><span className="sr-only">Buscar projeto</span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar projeto, cliente ou tag" className="min-h-12 w-full rounded-2xl border border-zinc-200 bg-white pl-11 pr-4 text-sm outline-none focus:border-zinc-400" /></label>
