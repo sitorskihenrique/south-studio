@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Eraser, FilePlus2, LayoutList, PencilLine, Save, SaveAll, Sparkles } from "lucide-react";
 import { calculateBudget, formatCurrency, sectionKeys } from "@/lib/budget/calculations";
@@ -21,6 +21,8 @@ import { DrePanel, FinancialFlow, ProvisionAndPayment } from "./FinancialPanels"
 import { LineItemTable } from "./LineItemTable";
 import { budgetStatuses, SavedBudgetsView } from "./SavedBudgetsView";
 import { ProjectLinkField } from "@/components/projects/ProjectLinkField";
+import { normalizeProjects, projectsStorageKey } from "@/lib/projects/storage";
+import type { StudioProject } from "@/lib/projects/types";
 
 export function BudgetCalculator() {
   const searchParams = useSearchParams();
@@ -34,40 +36,104 @@ export function BudgetCalculator() {
   const [storageLabel, setStorageLabel] = useState("Modo local");
   const [mode, setMode] = useState<"essential" | "professional">("essential");
   const totals = useMemo(() => calculateBudget(budget), [budget]);
+  const budgetRef = useRef(budget);
+  const savedBudgetsRef = useRef(savedBudgets);
+  const dirtyRef = useRef(dirty);
+  const readyRef = useRef(ready);
+
+  useEffect(() => { budgetRef.current = budget; }, [budget]);
+  useEffect(() => { savedBudgetsRef.current = savedBudgets; }, [savedBudgets]);
+  useEffect(() => { dirtyRef.current = dirty; }, [dirty]);
+  useEffect(() => { readyRef.current = ready; }, [ready]);
 
   useEffect(() => {
     let mounted = true;
-    const draft = readLocalStorage<Partial<BudgetState> | null>(draftStorageKey, null);
-    const saved = readLocalStorage<SavedBudget[]>(savedBudgetsStorageKey, []);
-    if (draft) setBudget(normalizeBudget({ ...draft, projectId: initialProjectId || draft.projectId }));
-    else if (initialProjectId) setBudget((current) => ({ ...current, projectId: initialProjectId }));
-    setSavedBudgets(saved);
-    setReady(true);
-    readCloudItems<SavedBudget>("budgets").then((result) => {
+
+    async function initialize() {
+      const localSaved = readLocalStorage<SavedBudget[]>(savedBudgetsStorageKey, []);
+      const [budgetResult, projectResult] = await Promise.all([
+        readCloudItems<SavedBudget>("budgets"),
+        initialProjectId ? readCloudItems<StudioProject>("projects") : Promise.resolve(null),
+      ]);
       if (!mounted) return;
-      if (!result.authenticated) {
-        setStorageLabel("Modo local");
-        return;
+
+      const saved = mergeSavedBudgets(localSaved, budgetResult?.ok ? budgetResult.items : []);
+      setSavedBudgets(saved);
+      setStorageLabel(budgetResult?.authenticated ? (budgetResult.ok ? "Sincronizado na conta" : "Salvo neste dispositivo") : "Modo local");
+
+      if (initialProjectId) {
+        const linked = saved.find((item) => linkedProjectId(item) === initialProjectId);
+        if (linked) {
+          setBudget(normalizeBudget({ ...linked.budget, projectId: initialProjectId }));
+          setSaveStatus("Orçamento vinculado ao projeto");
+        } else {
+          const localProjects = normalizeProjects(readLocalStorage<StudioProject[]>(projectsStorageKey, []));
+          const projects = mergeProjects(localProjects, projectResult?.ok ? projectResult.items : []);
+          const project = projects.find((item) => item.id === initialProjectId);
+          setBudget(createProjectBudget(initialProjectId, project));
+          setSaveStatus("Novo orçamento vinculado ao projeto");
+        }
+      } else {
+        const draft = readLocalStorage<Partial<BudgetState> | null>(draftStorageKey, null);
+        setBudget(draft ? normalizeBudget(draft) : createDefaultBudget());
       }
-      setStorageLabel(result.ok ? "Sincronizado na conta" : "Salvo neste dispositivo");
-      if (result.ok && result.items.length) setSavedBudgets(result.items);
-    });
+
+      setDirty(false);
+      setReady(true);
+    }
+
+    initialize();
     return () => { mounted = false; };
   }, [initialProjectId]);
 
   useEffect(() => {
     if (!ready) return;
+    if (initialProjectId) return;
     const timeout = window.setTimeout(() => {
       writeLocalStorage(draftStorageKey, { ...budget, updatedAt: new Date().toISOString() });
       if (dirty) setSaveStatus("Alterações preservadas como rascunho");
     }, 350);
     return () => window.clearTimeout(timeout);
-  }, [budget, dirty, ready]);
+  }, [budget, dirty, initialProjectId, ready]);
+
+  useEffect(() => {
+    if (!ready || !initialProjectId || !dirty) return;
+
+    const timeout = window.setTimeout(() => {
+      void persistProjectBudget(budget, savedBudgets, {
+        onLocalSave: (next, saved) => {
+          setSavedBudgets(next);
+          setBudget(saved.budget);
+          setDirty(false);
+          setSaveStatus("Orçamento salvo automaticamente");
+        },
+        onCloudSave: (cloud) => {
+          if (cloud.authenticated) setStorageLabel(cloud.ok ? "Sincronizado na conta" : "Salvo neste dispositivo");
+        },
+      });
+    }, 900);
+
+    return () => window.clearTimeout(timeout);
+  }, [budget, dirty, initialProjectId, ready, savedBudgets]);
+
+  useEffect(() => {
+    return () => {
+      if (!initialProjectId || !readyRef.current || !dirtyRef.current) return;
+      const current = { ...budgetRef.current, projectId: initialProjectId };
+      const saved = createSavedBudget(current, calculateBudget(current));
+      const next = upsertSavedBudget(savedBudgetsRef.current, saved);
+      writeLocalStorage(savedBudgetsStorageKey, next);
+      void upsertCloudItem("budgets", saved, saved.projectName);
+    };
+  }, [initialProjectId]);
 
   function updateBudget(updater: (current: BudgetState) => BudgetState) {
     setSaveStatus("Alterações não salvas no registro");
     setDirty(true);
-    setBudget(updater);
+    setBudget((current) => {
+      const next = updater(current);
+      return initialProjectId ? { ...next, projectId: initialProjectId } : next;
+    });
   }
 
   function updateSection(key: BudgetSectionKey, lines: BudgetState["sections"][BudgetSectionKey]) {
@@ -86,7 +152,13 @@ export function BudgetCalculator() {
 
   function newBudget() {
     if (dirty && !window.confirm("Você tem alterações não salvas. Deseja continuar?")) return;
-    setBudget({ ...createDefaultBudget(crypto.randomUUID()), projectId: initialProjectId });
+    const blank = createDefaultBudget(initialProjectId ? projectBudgetId(initialProjectId) : crypto.randomUUID());
+    setBudget({
+      ...blank,
+      projectId: initialProjectId,
+      projectName: initialProjectId ? budget.projectName : blank.projectName,
+      client: initialProjectId ? { ...blank.client, company: budget.client.company } : blank.client,
+    });
     setDirty(false);
     setSaveStatus("Novo orçamento iniciado");
     setActiveTab("create");
@@ -189,7 +261,7 @@ export function BudgetCalculator() {
               <div className="flex flex-wrap gap-2">
                 <ActionButton icon={FilePlus2} label="Novo orçamento" onClick={newBudget} />
                 <ActionButton icon={Save} label="Salvar orçamento" onClick={saveNow} primary />
-                <ActionButton icon={SaveAll} label="Salvar como novo" onClick={() => saveAsNew()} />
+                {!initialProjectId && <ActionButton icon={SaveAll} label="Salvar como novo" onClick={() => saveAsNew()} />}
                 <ActionButton icon={Eraser} label="Limpar cálculo" onClick={clearCalculation} />
               </div>
             )}
@@ -367,6 +439,76 @@ function EditingHeader({
       </div>
     </div>
   );
+}
+
+function projectBudgetId(projectId: string) {
+  return `project-budget-${projectId}`;
+}
+
+function linkedProjectId(item: SavedBudget) {
+  return item.projectId || item.budget?.projectId || "";
+}
+
+function mergeSavedBudgets(local: SavedBudget[], cloud: SavedBudget[]) {
+  const merged = new Map<string, SavedBudget>();
+  local.forEach((item) => {
+    if (item?.id) merged.set(item.id, item);
+  });
+  cloud.forEach((item) => {
+    if (item?.id) merged.set(item.id, item);
+  });
+  return Array.from(merged.values()).sort((a, b) => String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")));
+}
+
+function mergeProjects(local: StudioProject[], cloud: StudioProject[]) {
+  const merged = new Map<string, StudioProject>();
+  local.forEach((item) => {
+    if (item?.id) merged.set(item.id, item);
+  });
+  cloud.forEach((item) => {
+    if (item?.id) merged.set(item.id, item);
+  });
+  return Array.from(merged.values());
+}
+
+function createProjectBudget(projectId: string, project?: StudioProject) {
+  const budget = createDefaultBudget(projectBudgetId(projectId));
+  return {
+    ...budget,
+    projectId,
+    projectName: project?.title || "",
+    client: { ...budget.client, company: project?.client || "" },
+    briefing: { ...budget.briefing, productionDays: 0 },
+    simple: {
+      ...budget.simple,
+      preProductionHours: 0,
+      filmingHours: 0,
+      editingHours: 0,
+      hourlyRate: 0,
+      dayCount: 0,
+      dayRate: 0,
+      equipment: 0,
+      travel: 0,
+      food: 0,
+      otherCosts: 0,
+    },
+  };
+}
+
+async function persistProjectBudget(
+  budget: BudgetState,
+  currentSaved: SavedBudget[],
+  callbacks: {
+    onLocalSave: (next: SavedBudget[], saved: SavedBudget) => void;
+    onCloudSave: (result: { authenticated: boolean; ok: boolean; error?: string }) => void;
+  },
+) {
+  const saved = createSavedBudget(budget, calculateBudget(budget));
+  const next = upsertSavedBudget(currentSaved, saved);
+  writeLocalStorage(savedBudgetsStorageKey, next);
+  callbacks.onLocalSave(next, saved);
+  const cloud = await upsertCloudItem("budgets", saved, saved.projectName);
+  callbacks.onCloudSave(cloud);
 }
 
 function normalizeBudget(stored: Partial<BudgetState>): BudgetState {

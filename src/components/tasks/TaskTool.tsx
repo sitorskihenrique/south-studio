@@ -29,8 +29,9 @@ const dayTabs: TaskDayFilter[] = ["Visão da Semana", "Hoje", ...taskDays, "Cale
 export function TaskTool() {
   const searchParams = useSearchParams();
   const initialProjectId = searchParams.get("project") || "";
+  const initialView = searchParams.get("view");
   const [tasks, setTasks] = useState<StudioTask[]>(defaultTasks);
-  const [selectedDay, setSelectedDay] = useState<TaskDayFilter>("Visão da Semana");
+  const [selectedDay, setSelectedDay] = useState<TaskDayFilter>(initialView === "calendar" ? "Calendário" : "Visão da Semana");
   const [selectedDate, setSelectedDate] = useState("");
   const [status, setStatus] = useState<TaskStatusFilter>("Todos");
   const [category, setCategory] = useState<TaskCategoryFilter>("Todas");

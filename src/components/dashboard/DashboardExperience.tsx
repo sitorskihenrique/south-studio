@@ -6,15 +6,11 @@ import {
   ArrowRight,
   BadgeDollarSign,
   CalendarDays,
-  CheckSquare2,
-  Clapperboard,
   Folder,
   FolderKanban,
-  Grid2X2,
   ListChecks,
   Plus,
   Search,
-  WalletCards,
 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
@@ -25,6 +21,7 @@ import { projectsStorageKey } from "@/lib/projects/storage";
 import type { StudioProject } from "@/lib/projects/types";
 import { tasksStorageKey } from "@/lib/tasks/storage";
 import type { StudioTask } from "@/lib/tasks/types";
+import { StudioSidebar } from "@/components/StudioSidebar";
 
 type DashboardState = {
   user: User | null;
@@ -37,14 +34,6 @@ type DashboardState = {
 const fakeProjectIds = new Set(["projeto-exemplo"]);
 const fakeTaskIds = new Set(["tarefa-guia", "tarefa-inicial-1", "tarefa-inicial-2", "tarefa-inicial-3"]);
 const blockedProjectNames = ["mv1 champion edition", "campanha simmons", "smurfit westrock", "projeto exemplo"];
-
-const sidebarItems = [
-  { label: "Projetos", detail: "Gerencie sua carteira", href: "/projetos", icon: Grid2X2 },
-  { label: "Tarefas", detail: "Pendências do dia", href: "/tarefas", icon: ListChecks },
-  { label: "Orçamentos", detail: "Valores e contratos", href: "/calculadora", icon: WalletCards },
-  { label: "Roteiros", detail: "Produções planejadas", href: "/plano-de-filmagem", icon: Clapperboard },
-  { label: "Calendário", detail: "Prazos e entregas", href: "/tarefas", icon: CalendarDays },
-];
 
 export function DashboardExperience() {
   const [state, setState] = useState<DashboardState>({ user: null, projects: [], tasks: [], budgets: [], loading: true });
@@ -105,37 +94,7 @@ export function DashboardExperience() {
   return (
     <main className="min-h-[100dvh] overflow-x-hidden bg-[#f5f6f8] text-zinc-950">
       <div className="mx-auto grid min-h-[100dvh] w-full max-w-[1540px] gap-5 px-4 py-5 sm:px-6 lg:grid-cols-[280px_minmax(0,1fr)] lg:px-8 lg:py-10">
-        <aside className="rounded-[30px] border border-white/75 bg-white/56 p-4 shadow-[0_22px_70px_rgba(16,24,40,0.08)] backdrop-blur-2xl lg:min-h-[calc(100dvh-5rem)] lg:p-6">
-          <Link href="/dashboard" className="block px-1 py-2">
-            <span className="text-[22px] font-black uppercase tracking-normal text-zinc-950">South Studio</span>
-            <span className="align-super text-[10px] font-black">TM</span>
-          </Link>
-
-          <nav className="mt-5 flex gap-3 overflow-x-auto pb-2 lg:mt-12 lg:flex-col lg:overflow-visible lg:pb-0">
-            {sidebarItems.map((item, index) => {
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.label}
-                  href={item.href}
-                  className={`group flex min-w-[210px] items-center gap-4 rounded-[22px] border px-4 py-4 transition lg:min-w-0 ${
-                    index === 0
-                      ? "border-white bg-white/82 shadow-[0_18px_44px_rgba(16,24,40,0.08)]"
-                      : "border-white/55 bg-white/42 hover:bg-white/78"
-                  }`}
-                >
-                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl text-zinc-700">
-                    <Icon size={25} strokeWidth={1.75} />
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block truncate text-[17px] font-semibold text-zinc-950">{item.label}</span>
-                    <span className="mt-1 block truncate text-sm font-medium text-zinc-500">{item.detail}</span>
-                  </span>
-                </Link>
-              );
-            })}
-          </nav>
-        </aside>
+        <StudioSidebar />
 
         <section className="rounded-[30px] border border-white/10 bg-[#121824] p-5 text-white shadow-[0_28px_80px_rgba(15,23,42,0.26)] sm:p-8 lg:rounded-[34px] lg:p-12">
           <div className="mx-auto flex h-full max-w-[1040px] flex-col">
