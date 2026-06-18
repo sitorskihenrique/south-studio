@@ -1,21 +1,17 @@
 import { defaultTasks } from "./defaults";
+import { readScopedStorage, writeScopedStorage } from "@/lib/storage/scope";
 import { taskCategories, taskDays, taskPriorities, taskStatuses, taskTimeOptions, type StudioTask, type TaskCategory } from "./types";
 
 export const tasksStorageKey = "south-studio-tasks-v1";
 export const tasksUpdatedEvent = "south-studio-tasks-updated";
 
 export function readTasks(): StudioTask[] {
-  try {
-    const stored = window.localStorage.getItem(tasksStorageKey);
-    return stored ? normalizeTasks(JSON.parse(stored)) : defaultTasks;
-  } catch {
-    return defaultTasks;
-  }
+  return normalizeTasks(readScopedStorage<unknown>(tasksStorageKey, defaultTasks));
 }
 
 export function writeTasks(tasks: StudioTask[]) {
   try {
-    window.localStorage.setItem(tasksStorageKey, JSON.stringify(tasks));
+    if (!writeScopedStorage(tasksStorageKey, tasks)) return false;
     window.dispatchEvent(new CustomEvent(tasksUpdatedEvent));
     return true;
   } catch {
@@ -28,7 +24,7 @@ export function normalizeTasks(value: unknown): StudioTask[] {
   const tasks = value
     .map((task, index) => normalizeTask(task, index))
     .filter((task) => !["tarefa-inicial-1", "tarefa-inicial-2", "tarefa-inicial-3"].includes(task.id));
-  return tasks.length ? tasks : defaultTasks;
+  return tasks;
 }
 
 export function normalizeTask(value: unknown, index = 0): StudioTask {

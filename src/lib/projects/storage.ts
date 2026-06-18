@@ -1,28 +1,19 @@
-import { exampleProject } from "./defaults";
+import { emptyPreProduction } from "./defaults";
+import { readScopedStorage, writeScopedStorage } from "@/lib/storage/scope";
 import { projectPriorities, projectStatuses, type StudioProject } from "./types";
 
 export const projectsStorageKey = "south-studio-projects-v1";
 
 export function readProjects(): StudioProject[] {
-  try {
-    const stored = window.localStorage.getItem(projectsStorageKey);
-    return stored ? normalizeProjects(JSON.parse(stored)) : [exampleProject];
-  } catch {
-    return [exampleProject];
-  }
+  return normalizeProjects(readScopedStorage<unknown>(projectsStorageKey, []));
 }
 
 export function writeProjects(projects: StudioProject[]) {
-  try {
-    window.localStorage.setItem(projectsStorageKey, JSON.stringify(projects));
-    return true;
-  } catch {
-    return false;
-  }
+  return writeScopedStorage(projectsStorageKey, projects);
 }
 
 export function normalizeProjects(value: unknown): StudioProject[] {
-  if (!Array.isArray(value)) return [exampleProject];
+  if (!Array.isArray(value)) return [];
   return value.map((item, index) => normalizeProject(item, index));
 }
 
@@ -39,7 +30,7 @@ export function normalizeProject(value: unknown, index = 0): StudioProject {
     description: typeof project.description === "string" ? project.description : "",
     tags: Array.isArray(project.tags) ? project.tags.filter((tag): tag is string => typeof tag === "string") : [],
     progress: typeof project.progress === "number" && Number.isFinite(project.progress) ? Math.min(100, Math.max(0, project.progress)) : 5,
-    preProduction: { ...exampleProject.preProduction, ...project.preProduction },
+    preProduction: { ...emptyPreProduction, ...project.preProduction },
     createdAt: project.createdAt || now,
     updatedAt: project.updatedAt || now,
     related: {

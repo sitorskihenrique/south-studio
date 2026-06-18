@@ -1,6 +1,7 @@
 "use client";
 
 import { createClient } from "./client";
+import type { User } from "@supabase/supabase-js";
 
 export type CloudTable = "budgets" | "film_plans" | "tasks" | "projects";
 
@@ -24,20 +25,35 @@ function projectIdFor(item: unknown) {
   return typeof projectId === "string" && projectId ? projectId : null;
 }
 
-export async function getCurrentUser() {
+let userCache: { user: User | null; expiresAt: number } | null = null;
+let userRequest: Promise<User | null> | null = null;
+
+export function setCloudAuthUser(user: User | null) {
+  userCache = { user, expiresAt: Date.now() + 60_000 };
+  userRequest = null;
+}
+
+async function getCurrentUser() {
+  if (userCache && userCache.expiresAt > Date.now()) return userCache.user;
+  if (userRequest) return userRequest;
+
   const supabase = createClient();
   if (!supabase) return null;
-  const { data, error } = await supabase.auth.getUser();
-  if (error) return null;
-  return data.user;
+  userRequest = supabase.auth.getUser().then(({ data, error }) => {
+    const user = error ? null : data.user;
+    userCache = { user, expiresAt: Date.now() + 10_000 };
+    userRequest = null;
+    return user;
+  });
+  return userRequest;
 }
 
 export async function readCloudItems<T>(table: CloudTable): Promise<CloudResult<T>> {
   const supabase = createClient();
   if (!supabase) return { authenticated: false, ok: false, items: [], error: "Supabase não configurado." };
 
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
-  if (userError || !user) return { authenticated: false, ok: false, items: [] };
+  const user = await getCurrentUser();
+  if (!user) return { authenticated: false, ok: false, items: [] };
 
   const { data, error } = await supabase
     .from(table)
@@ -53,8 +69,8 @@ export async function upsertCloudItem<T extends { id: string }>(table: CloudTabl
   const supabase = createClient();
   if (!supabase) return { authenticated: false, ok: false, error: "Supabase não configurado." };
 
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
-  if (userError || !user) return { authenticated: false, ok: false, error: "Usuário não autenticado." };
+  const user = await getCurrentUser();
+  if (!user) return { authenticated: false, ok: false, error: "Usuário não autenticado." };
 
   const { error } = await supabase.from(table).upsert({
     id: item.id,
@@ -68,12 +84,17 @@ export async function upsertCloudItem<T extends { id: string }>(table: CloudTabl
   return { authenticated: true, ok: !error, error: error?.message };
 }
 
-export async function replaceCloudItems<T extends { id: string }>(table: CloudTable, items: T[], titleForItem: (item: T) => string) {
+export async function replaceCloudItems<T extends { id: string }>(
+  table: CloudTable,
+  items: T[],
+  titleForItem: (item: T) => string,
+  options: { deleteMissing?: boolean } = {},
+) {
   const supabase = createClient();
   if (!supabase) return { authenticated: false, ok: false, error: "Supabase não configurado." };
 
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
-  if (userError || !user) return { authenticated: false, ok: false, error: "Usuário não autenticado." };
+  const user = await getCurrentUser();
+  if (!user) return { authenticated: false, ok: false, error: "Usuário não autenticado." };
 
   const rows = items.map((item) => ({
     id: item.id,
@@ -84,6 +105,17 @@ export async function replaceCloudItems<T extends { id: string }>(table: CloudTa
     updated_at: new Date().toISOString(),
   }));
 
+  if (options.deleteMissing) {
+    const { data: existing, error: existingError } = await supabase.from(table).select("id").eq("user_id", user.id);
+    if (existingError) return { authenticated: true, ok: false, error: existingError.message };
+    const currentIds = new Set(rows.map((row) => row.id));
+    const missingIds = (existing || []).map((row) => row.id as string).filter((id) => !currentIds.has(id));
+    if (missingIds.length) {
+      const { error: deleteError } = await supabase.from(table).delete().eq("user_id", user.id).in("id", missingIds);
+      if (deleteError) return { authenticated: true, ok: false, error: deleteError.message };
+    }
+  }
+
   if (!rows.length) return { authenticated: true, ok: true };
   const { error } = await supabase.from(table).upsert(rows, { onConflict: "id,user_id" });
   return { authenticated: true, ok: !error, error: error?.message };
@@ -93,8 +125,8 @@ export async function deleteCloudItem(table: CloudTable, id: string) {
   const supabase = createClient();
   if (!supabase) return { authenticated: false, ok: false, error: "Supabase não configurado." };
 
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
-  if (userError || !user) return { authenticated: false, ok: false, error: "Usuário não autenticado." };
+  const user = await getCurrentUser();
+  if (!user) return { authenticated: false, ok: false, error: "Usuário não autenticado." };
 
   const { error } = await supabase.from(table).delete().eq("id", id).eq("user_id", user.id);
   return { authenticated: true, ok: !error, error: error?.message };

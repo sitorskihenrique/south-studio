@@ -1,24 +1,15 @@
 import type { BudgetState, SavedBudget } from "./types";
+import { readScopedStorage, writeScopedStorage } from "@/lib/storage/scope";
 
 export const draftStorageKey = "south-studio-budget-calculator-v4";
 export const savedBudgetsStorageKey = "south-studio-saved-budgets-v1";
 
 export function readLocalStorage<T>(key: string, fallback: T): T {
-  try {
-    const value = window.localStorage.getItem(key);
-    return value ? (JSON.parse(value) as T) : fallback;
-  } catch {
-    return fallback;
-  }
+  return readScopedStorage(key, fallback);
 }
 
 export function writeLocalStorage(key: string, value: unknown) {
-  try {
-    window.localStorage.setItem(key, JSON.stringify(value));
-    return true;
-  } catch {
-    return false;
-  }
+  return writeScopedStorage(key, value);
 }
 
 export function createSavedBudget(budget: BudgetState, summary: SavedBudget["summary"]): SavedBudget {

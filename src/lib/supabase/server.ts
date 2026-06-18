@@ -4,17 +4,6 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { isSupabaseConfigured, supabaseAnonKey, supabaseUrl } from "./config";
 
-export function createPublicSupabase() {
-  if (!isSupabaseConfigured() || !supabaseUrl || !supabaseAnonKey) return null;
-
-  return createServerClient(supabaseUrl, supabaseAnonKey, {
-    cookies: {
-      getAll: () => [],
-      setAll: () => {},
-    },
-  });
-}
-
 export async function createServerSupabase() {
   if (!isSupabaseConfigured() || !supabaseUrl || !supabaseAnonKey) return null;
 

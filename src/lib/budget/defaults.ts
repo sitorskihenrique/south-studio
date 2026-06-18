@@ -24,8 +24,8 @@ export const sectionMeta: Record<
   },
   southProduction: {
     eyebrow: "Equipe interna",
-    title: "Produção South",
-    description: "Use horas internas da equipe South e ajuste a complexidade.",
+    title: "Produção interna",
+    description: "Use horas internas da equipe e ajuste a complexidade.",
     usesComplexity: true,
     quantityLabel: "Horas",
   },

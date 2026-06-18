@@ -1,18 +1,20 @@
 import type { Metadata, Viewport } from "next";
 import { ServiceWorkerRegistrar } from "@/components/pwa/ServiceWorkerRegistrar";
+import { AuthSessionProvider } from "@/components/auth/AuthSessionProvider";
+import { brand } from "@/lib/brand";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "South Studio",
-    template: "%s | South Studio",
+    default: brand.name,
+    template: `%s | ${brand.name}`,
   },
-  description: "Plataforma de ferramentas para produção audiovisual",
-  applicationName: "South Studio",
+  description: brand.description,
+  applicationName: brand.name,
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
-    title: "South Studio",
+    title: brand.name,
     statusBarStyle: "black-translucent",
   },
   icons: {
@@ -28,7 +30,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#111111",
+  themeColor: brand.themeColor,
 };
 
 export default function RootLayout({
@@ -39,7 +41,7 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" data-scroll-behavior="smooth">
       <body>
-        {children}
+        <AuthSessionProvider>{children}</AuthSessionProvider>
         <ServiceWorkerRegistrar />
       </body>
     </html>

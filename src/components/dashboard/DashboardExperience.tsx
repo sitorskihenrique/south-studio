@@ -21,6 +21,8 @@ import type { StudioProject } from "@/lib/projects/types";
 import { tasksStorageKey } from "@/lib/tasks/storage";
 import type { StudioTask } from "@/lib/tasks/types";
 import { StudioSidebar } from "@/components/StudioSidebar";
+import { useAuthSession } from "@/components/auth/AuthSessionProvider";
+import { readScopedStorage } from "@/lib/storage/scope";
 
 type DashboardState = {
   user: User | null;
@@ -35,6 +37,7 @@ const fakeTaskIds = new Set(["tarefa-guia", "tarefa-inicial-1", "tarefa-inicial-
 const blockedProjectNames = ["mv1 champion edition", "campanha simmons", "smurfit westrock", "projeto exemplo"];
 
 export function DashboardExperience() {
+  const { user, ready } = useAuthSession();
   const [state, setState] = useState<DashboardState>({ user: null, projects: [], tasks: [], budgets: [], loading: true });
   const [search, setSearch] = useState("");
 
@@ -42,23 +45,17 @@ export function DashboardExperience() {
     let alive = true;
 
     async function loadDashboard() {
+      if (!ready) return;
       const localState = {
-        projects: cleanProjects(readLocalArray<StudioProject>(projectsStorageKey)),
-        tasks: cleanTasks(readLocalArray<StudioTask>(tasksStorageKey)),
-        budgets: cleanBudgets(readLocalArray<SavedBudget>(savedBudgetsStorageKey)),
+        projects: cleanProjects(readScopedStorage<StudioProject[]>(projectsStorageKey, [])),
+        tasks: cleanTasks(readScopedStorage<StudioTask[]>(tasksStorageKey, [])),
+        budgets: cleanBudgets(readScopedStorage<SavedBudget[]>(savedBudgetsStorageKey, [])),
       };
-      setState((current) => ({ ...current, ...localState, loading: true }));
+      setState((current) => ({ ...current, user, ...localState, loading: true }));
 
       const supabase = createClient();
-      if (!supabase) {
+      if (!supabase || !user) {
         if (alive) setState((current) => ({ ...current, loading: false }));
-        return;
-      }
-
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!alive) return;
-      if (!user) {
-        setState((current) => ({ ...current, user: null, loading: false }));
         return;
       }
 
@@ -84,7 +81,7 @@ export function DashboardExperience() {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [ready, user]);
 
   const displayName = getDisplayName(state.user);
   const greeting = getGreeting();
@@ -116,7 +113,7 @@ export function DashboardExperience() {
         <section className="rounded-[30px] border border-white/10 bg-[#121824] p-5 text-white shadow-[0_28px_80px_rgba(15,23,42,0.26)] sm:p-8 lg:rounded-[34px] lg:p-12">
           <div className="mx-auto flex h-full max-w-[1040px] flex-col">
             <div className="pt-2 sm:pt-4 lg:pt-10">
-              <p className="text-sm font-semibold uppercase text-white/35">{state.loading ? "Carregando workspace" : "Workspace audiovisual"}</p>
+              <p className="text-sm font-semibold uppercase text-white/35">Workspace audiovisual</p>
               {state.loading && !state.user
                 ? <div className="studio-skeleton mt-5 h-14 max-w-[620px] rounded-2xl sm:h-20" aria-label="Carregando saudação" />
                 : <h1 className="mt-5 text-[42px] font-semibold leading-[0.98] tracking-normal text-white sm:text-6xl lg:text-7xl">{greeting}, {displayName}.</h1>}
@@ -229,16 +226,6 @@ function NewProjectCard({ compact }: { compact?: boolean }) {
       </div>
     </Link>
   );
-}
-
-function readLocalArray<T>(key: string): T[] {
-  try {
-    const raw = window.localStorage.getItem(key);
-    const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed as T[] : [];
-  } catch {
-    return [];
-  }
 }
 
 function cleanProjects(projects: StudioProject[]) {

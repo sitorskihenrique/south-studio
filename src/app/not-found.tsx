@@ -7,7 +7,7 @@ export default function NotFound() {
         <p className="text-sm font-semibold text-violet-700">404</p>
         <h1 className="mt-3 text-3xl font-semibold text-zinc-950">Página não encontrada</h1>
         <Link href="/" className="mt-6 inline-flex min-h-12 items-center rounded-xl bg-zinc-950 px-5 text-sm font-semibold text-white">
-          Voltar ao South Studio
+          Voltar ao Cologne OS
         </Link>
       </div>
     </main>

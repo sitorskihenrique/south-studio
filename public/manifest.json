@@ -1,12 +1,12 @@
 {
-  "name": "South Studio",
-  "short_name": "South",
-  "description": "Plataforma de ferramentas para produção audiovisual",
+  "name": "Cologne OS",
+  "short_name": "Cologne",
+  "description": "Workspace para produção audiovisual",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#111111",
+  "theme_color": "#121824",
   "orientation": "portrait",
   "icons": [
     {

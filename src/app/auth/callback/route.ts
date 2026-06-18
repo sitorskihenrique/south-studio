@@ -1,11 +1,12 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { isSupabaseConfigured, supabaseAnonKey, supabaseUrl } from "@/lib/supabase/config";
+import { sanitizeInternalPath } from "@/lib/auth/redirect";
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
-  const next = sanitizeNext(requestUrl.searchParams.get("next"));
+  const next = sanitizeInternalPath(requestUrl.searchParams.get("next"));
   const response = NextResponse.redirect(new URL(next, request.url));
 
   if (!code || !isSupabaseConfigured() || !supabaseUrl || !supabaseAnonKey) {
@@ -27,8 +28,4 @@ export async function GET(request: NextRequest) {
   if (error) return NextResponse.redirect(new URL("/login", request.url));
 
   return response;
-}
-
-function sanitizeNext(value: string | null) {
-  return value?.startsWith("/") && !value.startsWith("//") ? value : "/dashboard";
 }

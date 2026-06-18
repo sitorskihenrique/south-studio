@@ -1,4 +1,4 @@
-# South Studio - Fundacao multi-tenant
+# Cologne OS - Fundacao multi-tenant
 
 Este projeto ainda opera as ferramentas principais por `user_id`.
 

@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { isSupabaseConfigured, supabaseAnonKey, supabaseUrl } from "./config";
+import { sanitizeInternalPath } from "@/lib/auth/redirect";
 
 const AUTH_TIMEOUT_MS = 7000;
 
@@ -12,6 +13,7 @@ const protectedRoutes = [
   "/projetos",
   "/configuracoes",
   "/app",
+  "/ordem-do-dia",
 ];
 
 const authRoutes = ["/login", "/cadastro"];
@@ -20,10 +22,10 @@ function matches(pathname: string, routes: string[]) {
   return routes.some((route) => pathname === route || pathname.startsWith(`${route}/`));
 }
 
-function safeInternalPath(value: string | null, fallback = "/dashboard") {
-  if (!value || !value.startsWith("/") || value.startsWith("//")) return fallback;
-  const path = value.split("#")[0] || fallback;
-  return matches(path.split("?")[0] || path, authRoutes) ? fallback : path;
+function redirectWithCookies(url: URL, response: NextResponse) {
+  const redirect = NextResponse.redirect(url);
+  response.cookies.getAll().forEach((cookie) => redirect.cookies.set(cookie));
+  return redirect;
 }
 
 async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T | null> {
@@ -79,14 +81,17 @@ export async function updateSession(request: NextRequest) {
     redirectUrl.pathname = "/login";
     redirectUrl.search = "";
     redirectUrl.searchParams.set("next", `${pathname}${request.nextUrl.search}`);
-    return NextResponse.redirect(redirectUrl);
+    return redirectWithCookies(redirectUrl, response);
   }
 
   if (isAuth && user) {
     const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = safeInternalPath(request.nextUrl.searchParams.get("next"));
+    const next = sanitizeInternalPath(request.nextUrl.searchParams.get("next"));
+    redirectUrl.pathname = next.split("?")[0];
+    const query = next.includes("?") ? next.slice(next.indexOf("?")) : "";
     redirectUrl.search = "";
-    return NextResponse.redirect(redirectUrl);
+    if (query) redirectUrl.search = query;
+    return redirectWithCookies(redirectUrl, response);
   }
 
   return response;

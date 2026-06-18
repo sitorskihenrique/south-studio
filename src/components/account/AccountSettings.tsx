@@ -12,6 +12,7 @@ import type { SavedFilmPlan } from "@/lib/film-plan/types";
 import { readTasks } from "@/lib/tasks/storage";
 import type { StudioTask } from "@/lib/tasks/types";
 import { replaceCloudItems } from "@/lib/supabase/data";
+import { InstallApp } from "@/components/pwa/InstallApp";
 
 export function AccountSettings() {
   const router = useRouter();
@@ -93,6 +94,7 @@ export function AccountSettings() {
             </div>
           </div>
         </div>
+        <InstallApp />
       </div>
     </section>
   );

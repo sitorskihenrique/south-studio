@@ -63,7 +63,7 @@ export function TaskTool() {
     setTasks(next);
     const ok = writeTasks(next);
     setMessage(ok ? successMessage : "Não foi possível salvar as alterações neste navegador.");
-    replaceCloudItems("tasks", next, (task) => task.title || "Tarefa").then((result) => {
+    replaceCloudItems("tasks", next, (task) => task.title || "Tarefa", { deleteMissing: true }).then((result) => {
       if (!result.authenticated) return;
       setStorageLabel(result.ok ? "Sincronizado na conta" : "Salvo neste dispositivo");
       if (!result.ok) setMessage(`${successMessage} Sincronização pendente.`);

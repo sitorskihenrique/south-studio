@@ -1,24 +1,15 @@
 import type { FilmPlan, SavedFilmPlan } from "./types";
+import { readScopedStorage, writeScopedStorage } from "@/lib/storage/scope";
 
 export const filmPlanDraftKey = "south-studio-film-plan-draft-v1";
 export const savedFilmPlansKey = "south-studio-saved-film-plans-v1";
 
 export function readFilmPlanStorage<T>(key: string, fallback: T): T {
-  try {
-    const value = window.localStorage.getItem(key);
-    return value ? (JSON.parse(value) as T) : fallback;
-  } catch {
-    return fallback;
-  }
+  return readScopedStorage(key, fallback);
 }
 
 export function writeFilmPlanStorage(key: string, value: unknown) {
-  try {
-    window.localStorage.setItem(key, JSON.stringify(value));
-    return true;
-  } catch {
-    return false;
-  }
+  return writeScopedStorage(key, value);
 }
 
 export function toSavedFilmPlan(plan: FilmPlan): SavedFilmPlan {
