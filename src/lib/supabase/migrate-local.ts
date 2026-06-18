@@ -12,6 +12,33 @@ import { readScopedStorage } from "@/lib/storage/scope";
 import { readCloudItems, replaceCloudItems } from "./data";
 
 const migrationKey = "cologne-os-cloud-migration-v1";
+const taskMigrationKey = "south-studio-task-cloud-migration-v2";
+
+export async function migrateLocalTasksOnce(userId: string) {
+  if (typeof window === "undefined" || !userId) return { ok: false, imported: 0 };
+  const marker = `${taskMigrationKey}:${userId}`;
+  if (window.localStorage.getItem(marker) === "done") return { ok: true, imported: 0 };
+
+  const cloud = await readCloudItems<StudioTask>("tasks", { force: true });
+  if (!cloud.authenticated || !cloud.ok) return { ok: false, imported: 0, error: cloud.error };
+  if (cloud.items.length) {
+    window.localStorage.setItem(marker, "done");
+    return { ok: true, imported: 0 };
+  }
+
+  const localTasks = readScopedStorage<StudioTask[]>(tasksStorageKey, []);
+  if (!localTasks.length) {
+    window.localStorage.setItem(marker, "done");
+    return { ok: true, imported: 0 };
+  }
+
+  const result = await replaceCloudItems("tasks", localTasks, (item) => item.title || "Tarefa");
+  if (result.authenticated && result.ok) {
+    window.localStorage.setItem(marker, "done");
+    return { ok: true, imported: localTasks.length };
+  }
+  return { ok: false, imported: 0, error: result.error };
+}
 
 export async function migrateLocalCollectionsOnce(userId: string) {
   if (typeof window === "undefined") return;

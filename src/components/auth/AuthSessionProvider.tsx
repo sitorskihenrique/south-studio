@@ -5,7 +5,6 @@ import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { setActiveStorageUser } from "@/lib/storage/scope";
 import { flushPendingCloudOperations, setCloudAuthUser } from "@/lib/supabase/data";
-import { migrateLocalCollectionsOnce } from "@/lib/supabase/migrate-local";
 
 type AuthSessionValue = {
   user: User | null;
@@ -22,7 +21,6 @@ const AuthSessionContext = createContext<AuthSessionValue>({
 });
 
 const SESSION_TIMEOUT_MS = 8_000;
-const MIGRATION_TIMEOUT_MS = 12_000;
 
 export function AuthSessionProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -70,15 +68,10 @@ export function AuthSessionProvider({ children }: { children: React.ReactNode })
         setUser(nextUser);
         setActiveStorageUser(nextUser?.id || null);
         setCloudAuthUser(nextUser);
-
-        if (nextUser) {
-          await withTimeout(migrateLocalCollectionsOnce(nextUser.id), MIGRATION_TIMEOUT_MS);
-          if (!active) return;
-          await flushPendingCloudOperations();
-        }
         if (!active) return;
         setError("");
         setReady(true);
+        if (nextUser) void flushPendingCloudOperations();
       } catch {
         if (!active) return;
         setError("Não foi possível conectar à sua conta. Verifique a internet e tente novamente.");
@@ -96,9 +89,7 @@ export function AuthSessionProvider({ children }: { children: React.ReactNode })
       setCloudAuthUser(nextUser);
       setError("");
       setReady(true);
-      if (nextUser) {
-        void migrateLocalCollectionsOnce(nextUser.id).then(() => flushPendingCloudOperations());
-      }
+      if (nextUser) void flushPendingCloudOperations();
     });
 
     const retryPending = () => void flushPendingCloudOperations();

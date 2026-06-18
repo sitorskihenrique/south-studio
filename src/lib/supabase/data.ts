@@ -83,7 +83,7 @@ export async function readCloudItems<T extends { id: string }>(
 
   const user = await getCurrentUser();
   if (!user) return { authenticated: false, ok: false, items: [] };
-  await flushCloudOutbox(user.id);
+  await flushCloudOutbox(user.id, table);
 
   const cached = itemsCache.get(table);
   if (!options.force && cached && cached.userId === user.id && cached.expiresAt > Date.now()) {
@@ -106,7 +106,14 @@ export async function readCloudItems<T extends { id: string }>(
     itemsRequests.delete(table);
     if (!result) return { authenticated: true, ok: false, items: [], error: "Tempo limite ao carregar dados." };
     const { data, error } = result;
-    if (error) return { authenticated: true, ok: false, items: [], error: error.message };
+    if (error) {
+      return {
+        authenticated: true,
+        ok: false,
+        items: applyCloudOutbox(user.id, table, []),
+        error: error.message,
+      };
+    }
     const cloudItems = ((data || []) as CloudRow<{ id: string }>[]).map((row) => row.data);
     const items = applyCloudOutbox(user.id, table, cloudItems);
     itemsCache.set(table, { userId: user.id, items, expiresAt: Date.now() + 15_000 });
@@ -116,7 +123,7 @@ export async function readCloudItems<T extends { id: string }>(
     return {
       authenticated: true,
       ok: false,
-      items: [],
+      items: applyCloudOutbox(user.id, table, []),
       error: error instanceof Error ? error.message : "Falha ao carregar dados.",
     };
   });
@@ -154,7 +161,7 @@ export async function upsertCloudItem<T extends { id: string }>(
       error: "Nao foi possivel preservar a alteracao para envio.",
     };
   }
-  await flushCloudOutbox(user.id);
+  await flushCloudOutbox(user.id, table);
   const pending = readCloudOutbox(user.id).some((operation) => operation.key === `${table}:${item.id}`);
   return {
     authenticated: true,
@@ -192,7 +199,7 @@ export async function replaceCloudItems<T extends { id: string }>(
   if (!queued) {
     return { authenticated: true, ok: false, queued: false, error: "Nao foi possivel preservar todos os itens para envio." };
   }
-  await flushCloudOutbox(user.id);
+  await flushCloudOutbox(user.id, table);
   const pendingKeys = new Set(readCloudOutbox(user.id).map((operation) => operation.key));
   const pending = items.some((item) => pendingKeys.has(`${table}:${item.id}`));
   return {
@@ -219,7 +226,7 @@ export async function deleteCloudItem(table: CloudTable, id: string): Promise<Cl
       error: "Nao foi possivel preservar a exclusao para envio.",
     };
   }
-  await flushCloudOutbox(user.id);
+  await flushCloudOutbox(user.id, table);
   const pending = readCloudOutbox(user.id).some((operation) => operation.key === `${table}:${id}`);
   return {
     authenticated: true,
@@ -235,34 +242,39 @@ export async function flushPendingCloudOperations() {
   return flushCloudOutbox(user.id);
 }
 
-async function flushCloudOutbox(userId: string) {
-  const existing = flushRequests.get(userId);
+async function flushCloudOutbox(userId: string, table?: CloudTable) {
+  const requestKey = `${userId}:${table || "all"}`;
+  const existing = flushRequests.get(requestKey);
   if (existing) return existing;
-  const request = runCloudOutbox(userId).finally(() => flushRequests.delete(userId));
-  flushRequests.set(userId, request);
+  const request = runCloudOutbox(userId, table).finally(() => flushRequests.delete(requestKey));
+  flushRequests.set(requestKey, request);
   return request;
 }
 
-async function runCloudOutbox(userId: string) {
+async function runCloudOutbox(userId: string, table?: CloudTable) {
   const supabase = createClient();
   if (!supabase) return false;
-  const operations = readCloudOutbox(userId);
+  const operations = readCloudOutbox(userId).filter((operation) => !table || operation.table === table);
   if (!operations.length) return true;
 
   const results = await Promise.all(operations.map(async (operation) => {
     try {
-      const request = operation.type === "delete"
-        ? supabase.from(operation.table).delete().eq("id", operation.id).eq("user_id", userId)
-        : supabase.from(operation.table).upsert({
-            id: operation.id,
-            user_id: userId,
-            title: operation.title || "Sem titulo",
-            ...(operation.table === "projects" ? {} : { project_id: projectIdFor(operation.item) }),
-            data: operation.item,
-            updated_at: new Date().toISOString(),
-          }, { onConflict: "id,user_id" });
-      const result = await withTimeout(Promise.resolve(request), 8_000);
-      if (!result || result.error) return null;
+      const result = operation.type === "delete"
+        ? await withTimeout(
+            Promise.resolve(supabase.from(operation.table).delete().eq("id", operation.id).eq("user_id", userId)),
+            8_000,
+          )
+        : await sendUpsertOperation(supabase, userId, operation);
+      if (!result || result.error) {
+        console.warn("[cloud-sync]", {
+          userId,
+          table: operation.table,
+          operation: operation.type,
+          itemId: operation.id,
+          error: result?.error?.message || "timeout",
+        });
+        return null;
+      }
       return operation;
     } catch {
       return null;
@@ -271,7 +283,47 @@ async function runCloudOutbox(userId: string) {
   const completedOperations = results.filter((operation) => operation !== null);
   completedOperations.forEach((operation) => itemsCache.delete(operation.table));
   acknowledgeCloudOperations(userId, completedOperations);
-  return readCloudOutbox(userId).length === 0;
+  return !readCloudOutbox(userId).some((operation) => !table || operation.table === table);
+}
+
+async function sendUpsertOperation(
+  supabase: NonNullable<ReturnType<typeof createClient>>,
+  userId: string,
+  operation: ReturnType<typeof readCloudOutbox>[number],
+) {
+  const baseRow = {
+    id: operation.id,
+    user_id: userId,
+    title: operation.title || "Sem titulo",
+    data: operation.item,
+    updated_at: new Date().toISOString(),
+  };
+  const projectId = operation.table === "projects" ? null : projectIdFor(operation.item);
+  const firstRow = operation.table === "projects" ? baseRow : { ...baseRow, project_id: projectId };
+  const first = await withTimeout(
+    Promise.resolve(supabase.from(operation.table).upsert(firstRow, { onConflict: "id,user_id" })),
+    8_000,
+  );
+  if (!first?.error || operation.table === "projects" || !isMissingProjectIdError(first.error.message)) {
+    return first;
+  }
+
+  console.info("[cloud-sync]", {
+    userId,
+    table: operation.table,
+    operation: "schema-fallback",
+    detail: "project_id indisponivel; salvando no formato compativel",
+  });
+  return withTimeout(
+    Promise.resolve(supabase.from(operation.table).upsert(baseRow, { onConflict: "id,user_id" })),
+    8_000,
+  );
+}
+
+function isMissingProjectIdError(message: string) {
+  const normalized = message.toLocaleLowerCase();
+  return normalized.includes("project_id") &&
+    (normalized.includes("column") || normalized.includes("schema cache") || normalized.includes("could not find"));
 }
 
 async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T | null> {

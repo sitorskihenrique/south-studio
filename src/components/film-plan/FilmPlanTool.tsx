@@ -15,6 +15,7 @@ import { SequenceBoard } from "./SequenceBoard";
 import { TimelineView } from "./TimelineView";
 import { ProjectLinkField } from "@/components/projects/ProjectLinkField";
 import { ToolHeader } from "@/components/ui/ToolHeader";
+import { PremiumPreviewDialog } from "@/components/PremiumPreviewDialog";
 
 type View = "editor" | "timeline" | "saved";
 
@@ -29,6 +30,7 @@ export function FilmPlanTool() {
   const [message, setMessage] = useState("Rascunho salvo localmente");
   const [storageLabel, setStorageLabel] = useState("Modo local");
   const [mode, setMode] = useState<"simple" | "complete">("simple");
+  const [premiumPreview, setPremiumPreview] = useState(false);
 
   const activeDay = useMemo(() => plan.days.find((day) => day.id === plan.activeDayId) || plan.days[0], [plan]);
 
@@ -160,7 +162,7 @@ export function FilmPlanTool() {
           actions={view !== "saved" ? <><Action icon={CalendarPlus} label="Novo plano" onClick={newPlan} /><Action icon={Save} label="Salvar plano" onClick={savePlan} primary /><Action icon={Copy} label="Duplicar" onClick={() => duplicate()} /></> : undefined}
         >
           <div className="mt-7 flex w-full gap-1 overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.06] p-1 sm:w-fit"><Tab icon={Film} label="Editor" active={view === "editor"} onClick={() => setView("editor")} /><Tab icon={LayoutList} label="Timeline" active={view === "timeline"} onClick={() => setView("timeline")} /><Tab icon={LayoutList} label={`Planos (${savedPlans.length})`} active={view === "saved"} onClick={() => setView("saved")} /></div>
-          {view === "editor" && <div className="hide-scrollbar mt-3 flex w-full gap-1 overflow-x-auto rounded-2xl bg-white/[0.06] p-1 sm:w-fit"><Mode active={mode === "simple"} label="Plano simples" onClick={() => setMode("simple")} /><Mode active={mode === "complete"} label="Plano completo" premium onClick={() => setMode("complete")} /></div>}
+          {view === "editor" && <div className="hide-scrollbar mt-3 flex w-full gap-1 overflow-x-auto rounded-2xl bg-white/[0.06] p-1 sm:w-fit"><Mode active={mode === "simple"} label="Plano simples" onClick={() => setMode("simple")} /><Mode active={false} label="Plano completo" premium onClick={() => setPremiumPreview(true)} /></div>}
         </ToolHeader>
 
         {view === "saved" ? <div className="mt-6"><SavedFilmPlansView plans={savedPlans} onOpen={openSaved} onDuplicate={(saved) => duplicate(saved.plan)} onDelete={deleteSaved} /></div> : (
@@ -183,6 +185,12 @@ export function FilmPlanTool() {
           </div>
         )}
       </div>
+      <PremiumPreviewDialog
+        open={premiumPreview}
+        title="Plano de Filmagem Completo"
+        description="Sequências avançadas, cronograma completo, referências e direção visual estarão disponíveis na experiência Premium."
+        onClose={() => setPremiumPreview(false)}
+      />
     </section>
   );
 }

@@ -1,6 +1,5 @@
 import { AppShell } from "@/components/AppShell";
 import { LoadingPanel } from "@/components/LoadingPanel";
-import { FeaturePreviewLock } from "@/components/FeaturePreviewLock";
 import dynamic from "next/dynamic";
 
 const FilmPlanTool = dynamic(
@@ -9,14 +8,5 @@ const FilmPlanTool = dynamic(
 );
 
 export default function FilmPlanPage() {
-  return (
-    <AppShell>
-      <FeaturePreviewLock
-        title="Plano de Filmagem em breve."
-        description="Estamos preparando um fluxo visual para organizar takes, roteiro, referências e cronograma em uma única experiência."
-      >
-        <FilmPlanTool />
-      </FeaturePreviewLock>
-    </AppShell>
-  );
+  return <AppShell><FilmPlanTool /></AppShell>;
 }

@@ -24,10 +24,13 @@ import { TaskFormSheet } from "./TaskFormSheet";
 import { TaskSummary } from "./TaskSummary";
 import { TaskWeekView } from "./TaskWeekView";
 import { ToolHeader } from "@/components/ui/ToolHeader";
+import { useAuthSession } from "@/components/auth/AuthSessionProvider";
+import { migrateLocalTasksOnce } from "@/lib/supabase/migrate-local";
 
 const dayTabs: TaskDayFilter[] = ["Visão da Semana", "Hoje", ...taskDays, "Calendário", "Concluídas"];
 
 export function TaskTool() {
+  const { user } = useAuthSession();
   const searchParams = useSearchParams();
   const initialProjectId = searchParams.get("project") || "";
   const initialView = searchParams.get("view");
@@ -41,22 +44,46 @@ export function TaskTool() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<TaskDraft>({ ...emptyTaskDraft, projectId: initialProjectId, day: getTodayTaskDay() });
   const [message, setMessage] = useState("");
-  const [storageLabel, setStorageLabel] = useState("Modo local");
+  const [storageLabel, setStorageLabel] = useState("Carregando da conta");
 
   useEffect(() => {
     let mounted = true;
-    setTasks(readTasks());
+    if (!user) return () => { mounted = false; };
 
-    const loadCloudTasks = (force = false) => readCloudItems<StudioTask>("tasks", { force }).then((result) => {
+    const loadCloudTasks = async (force = false) => {
+      const localCount = readTasks().length;
+      const migration = await migrateLocalTasksOnce(user.id);
+      const result = await readCloudItems<StudioTask>("tasks", { force: force || migration.imported > 0 });
       if (!mounted) return;
-      if (!result.authenticated) return setStorageLabel("Modo local");
-      setStorageLabel(result.ok ? "Sincronizado na conta" : "Salvo neste dispositivo");
+      console.info("[task-sync]", {
+        userId: user.id,
+        cloudCount: result.items.length,
+        localCount,
+        source: result.ok ? "supabase" : result.items.length ? "outbox-pendente" : "erro-supabase",
+        migrationImported: migration.imported,
+        error: result.error || migration.error || null,
+      });
+      if (!result.authenticated) {
+        setStorageLabel("Conta indisponível");
+        setMessage("Não foi possível validar sua conta. Entre novamente.");
+        return;
+      }
       if (result.ok) {
         const cloudTasks = normalizeTasks(result.items);
         setTasks(cloudTasks);
         writeTasks(cloudTasks);
+        setStorageLabel("Sincronizado na conta");
+        return;
       }
-    });
+      if (result.items.length) {
+        setTasks(normalizeTasks(result.items));
+        setStorageLabel("Sincronização pendente");
+      } else {
+        setTasks([]);
+        setStorageLabel("Erro de sincronização");
+      }
+      setMessage(`Não foi possível carregar as tarefas do Supabase.${result.error ? ` ${result.error}` : ""}`);
+    };
     void loadCloudTasks();
     const refresh = () => void loadCloudTasks(true);
     window.addEventListener("focus", refresh);
@@ -65,7 +92,7 @@ export function TaskTool() {
       mounted = false;
       window.removeEventListener("focus", refresh);
     };
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     setSelectedDay(initialView === "calendar" ? "Calendário" : "Visão da Semana");
@@ -79,6 +106,14 @@ export function TaskTool() {
     setMessage(successMessage);
     writeTasks(next);
     upsertCloudItem("tasks", task, task.title || "Tarefa").then((result) => {
+      console.info("[task-sync]", {
+        userId: user?.id || null,
+        operation: "upsert",
+        taskId: task.id,
+        ok: result.ok,
+        queued: result.queued || false,
+        error: result.error || null,
+      });
       if (!result.authenticated) {
         setStorageLabel("Salvo neste dispositivo");
         return;
@@ -95,6 +130,14 @@ export function TaskTool() {
     setMessage(successMessage);
     writeTasks(next);
     deleteCloudItem("tasks", taskId).then((result) => {
+      console.info("[task-sync]", {
+        userId: user?.id || null,
+        operation: "delete",
+        taskId,
+        ok: result.ok,
+        queued: result.queued || false,
+        error: result.error || null,
+      });
       if (!result.authenticated) {
         setStorageLabel("Salvo neste dispositivo");
         return;
