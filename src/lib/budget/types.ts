@@ -59,8 +59,14 @@ export type BudgetSettings = {
 export type SimpleBudgetData = {
   chargeType: "Por diária" | "Por hora" | "Misto";
   preProductionHours: number;
+  preProductionHourlyRate: number;
   filmingHours: number;
+  filmingHourlyRate: number;
   editingHours: number;
+  editingHourlyRate: number;
+  finishingHours: number;
+  finishingHourlyRate: number;
+  /** Mantido para compatibilidade com orçamentos criados antes da separação por etapa. */
   hourlyRate: number;
   dayCount: number;
   dayRate: number;

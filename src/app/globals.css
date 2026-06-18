@@ -6,6 +6,10 @@
   color-scheme: light;
   --background: #f4f3f1;
   --foreground: #141414;
+  --studio-navy: #121824;
+  --studio-navy-hover: #1a2333;
+  --studio-gold: #b88a3b;
+  --studio-gold-soft: #f7eedb;
 }
 
 * {
@@ -76,6 +80,50 @@ select {
 
 .studio-shell {
   background: #f4f3f0;
+}
+
+.studio-app .bg-zinc-950 {
+  background-color: var(--studio-navy);
+}
+
+.studio-app .hover\:bg-zinc-800:hover {
+  background-color: var(--studio-navy-hover);
+}
+
+.studio-app .text-zinc-950 {
+  color: var(--studio-navy);
+}
+
+.studio-app .accent-zinc-950 {
+  accent-color: var(--studio-navy);
+}
+
+.studio-premium {
+  border-color: rgba(184, 138, 59, 0.42) !important;
+  background: linear-gradient(135deg, rgba(247, 238, 219, 0.92), rgba(255, 255, 255, 0.92)) !important;
+  color: #8a6428 !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 7px 20px rgba(184, 138, 59, 0.08);
+}
+
+.studio-premium-badge {
+  border: 1px solid rgba(184, 138, 59, 0.36);
+  background: rgba(184, 138, 59, 0.1);
+  color: #8a6428;
+}
+
+@keyframes studio-skeleton {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.studio-skeleton {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.05) 25%, rgba(255, 255, 255, 0.13) 50%, rgba(255, 255, 255, 0.05) 75%);
+  background-size: 200% 100%;
+  animation: studio-skeleton 1.35s ease-in-out infinite;
 }
 
 .studio-panel {

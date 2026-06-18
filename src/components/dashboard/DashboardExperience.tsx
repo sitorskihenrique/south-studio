@@ -14,7 +14,6 @@ import {
 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
-import { readCloudItems } from "@/lib/supabase/data";
 import { savedBudgetsStorageKey } from "@/lib/budget/storage";
 import type { SavedBudget } from "@/lib/budget/types";
 import { projectsStorageKey } from "@/lib/projects/storage";
@@ -43,21 +42,39 @@ export function DashboardExperience() {
     let alive = true;
 
     async function loadDashboard() {
+      const localState = {
+        projects: cleanProjects(readLocalArray<StudioProject>(projectsStorageKey)),
+        tasks: cleanTasks(readLocalArray<StudioTask>(tasksStorageKey)),
+        budgets: cleanBudgets(readLocalArray<SavedBudget>(savedBudgetsStorageKey)),
+      };
+      setState((current) => ({ ...current, ...localState, loading: true }));
+
       const supabase = createClient();
-      const user = supabase ? (await supabase.auth.getUser()).data.user : null;
-      const [cloudProjects, cloudTasks, cloudBudgets] = await Promise.all([
-        readCloudItems<StudioProject>("projects"),
-        readCloudItems<StudioTask>("tasks"),
-        readCloudItems<SavedBudget>("budgets"),
+      if (!supabase) {
+        if (alive) setState((current) => ({ ...current, loading: false }));
+        return;
+      }
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!alive) return;
+      if (!user) {
+        setState((current) => ({ ...current, user: null, loading: false }));
+        return;
+      }
+
+      const [projectsResult, tasksResult, budgetsResult] = await Promise.all([
+        supabase.from("projects").select("data").eq("user_id", user.id).order("updated_at", { ascending: false }),
+        supabase.from("tasks").select("data").eq("user_id", user.id).order("updated_at", { ascending: false }),
+        supabase.from("budgets").select("data").eq("user_id", user.id).order("updated_at", { ascending: false }),
       ]);
 
       if (!alive) return;
 
       setState({
         user,
-        projects: cleanProjects(cloudProjects.authenticated && cloudProjects.ok ? cloudProjects.items : readLocalArray<StudioProject>(projectsStorageKey)),
-        tasks: cleanTasks(cloudTasks.authenticated && cloudTasks.ok ? cloudTasks.items : readLocalArray<StudioTask>(tasksStorageKey)),
-        budgets: cleanBudgets(cloudBudgets.authenticated && cloudBudgets.ok ? cloudBudgets.items : readLocalArray<SavedBudget>(savedBudgetsStorageKey)),
+        projects: resolveCloudData(projectsResult.data, projectsResult.error, localState.projects, cleanProjects),
+        tasks: resolveCloudData(tasksResult.data, tasksResult.error, localState.tasks, cleanTasks),
+        budgets: resolveCloudData(budgetsResult.data, budgetsResult.error, localState.budgets, cleanBudgets),
         loading: false,
       });
     }
@@ -92,7 +109,7 @@ export function DashboardExperience() {
   ];
 
   return (
-    <main className="min-h-[100dvh] overflow-x-hidden bg-[#f5f6f8] text-zinc-950">
+    <main className="studio-app min-h-[100dvh] overflow-x-hidden bg-[#f5f6f8] text-zinc-950">
       <div className="mx-auto grid min-h-[100dvh] w-full max-w-[1540px] gap-5 px-4 py-5 sm:px-6 lg:grid-cols-[280px_minmax(0,1fr)] lg:px-8 lg:py-10">
         <StudioSidebar />
 
@@ -100,9 +117,9 @@ export function DashboardExperience() {
           <div className="mx-auto flex h-full max-w-[1040px] flex-col">
             <div className="pt-2 sm:pt-4 lg:pt-10">
               <p className="text-sm font-semibold uppercase text-white/35">{state.loading ? "Carregando workspace" : "Workspace audiovisual"}</p>
-              <h1 className="mt-5 text-[42px] font-semibold leading-[0.98] tracking-normal text-white sm:text-6xl lg:text-7xl">
-                {greeting}, {displayName}.
-              </h1>
+              {state.loading && !state.user
+                ? <div className="studio-skeleton mt-5 h-14 max-w-[620px] rounded-2xl sm:h-20" aria-label="Carregando saudação" />
+                : <h1 className="mt-5 text-[42px] font-semibold leading-[0.98] tracking-normal text-white sm:text-6xl lg:text-7xl">{greeting}, {displayName}.</h1>}
               <p className="mt-5 text-xl font-medium text-white/52 sm:text-2xl">Qual projeto vamos produzir hoje?</p>
             </div>
 
@@ -122,7 +139,9 @@ export function DashboardExperience() {
                 return (
                   <article key={metric.label} className="rounded-[18px] border border-white/10 bg-white/[0.055] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
                     <div className="flex items-start justify-between gap-4">
-                      <p className="text-[34px] font-semibold leading-none text-white">{metric.value}</p>
+                      {state.loading && !hasCachedData(state)
+                        ? <span className="studio-skeleton h-9 w-20 rounded-lg" />
+                        : <p className="text-[34px] font-semibold leading-none text-white">{metric.value}</p>}
                       <Icon size={27} strokeWidth={1.75} className={metric.accent} />
                     </div>
                     <p className="mt-4 flex items-center gap-2 text-sm font-medium text-white/48">
@@ -141,7 +160,11 @@ export function DashboardExperience() {
                 </span>
               </div>
 
-              {filteredProjects.length ? (
+              {state.loading && !state.projects.length ? (
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4" aria-label="Carregando projetos">
+                  {[0, 1, 2, 3].map((item) => <div key={item} className="studio-skeleton min-h-[186px] rounded-[18px] border border-white/10" />)}
+                </div>
+              ) : filteredProjects.length ? (
                 <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                   {filteredProjects.slice(0, 7).map((project, index) => (
                     <ProjectAccessCard key={project.id} project={project} index={index} />
@@ -272,4 +295,18 @@ function formatCurrency(value: number) {
 
 function safeMoney(value: unknown) {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
+function rowsData<T>(rows: Array<{ data?: unknown }> | null) {
+  return (rows || []).map((row) => row.data).filter((item): item is T => Boolean(item && typeof item === "object"));
+}
+
+function resolveCloudData<T>(rows: Array<{ data?: unknown }> | null, error: unknown, local: T[], clean: (items: T[]) => T[]) {
+  if (error) return local;
+  const cloud = clean(rowsData<T>(rows));
+  return cloud.length ? cloud : local;
+}
+
+function hasCachedData(state: DashboardState) {
+  return Boolean(state.projects.length || state.tasks.length || state.budgets.length);
 }

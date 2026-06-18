@@ -73,10 +73,10 @@ export function StudioSidebar() {
             <Link
               key={item.label}
               href={item.href}
-              className={`group flex min-w-[196px] items-center gap-3 rounded-[20px] border px-3 py-3 transition lg:min-w-0 ${
+              className={`group relative flex min-w-[196px] cursor-pointer items-center gap-3 overflow-hidden rounded-[20px] border px-3 py-3 transition duration-300 before:pointer-events-none before:absolute before:inset-y-0 before:left-[-45%] before:w-1/3 before:skew-x-[-18deg] before:bg-gradient-to-r before:from-transparent before:via-white/70 before:to-transparent before:opacity-0 before:transition-all before:duration-500 hover:-translate-y-0.5 hover:border-white/90 hover:bg-white/76 hover:shadow-[0_16px_36px_rgba(18,24,36,0.12)] hover:before:left-[120%] hover:before:opacity-70 lg:min-w-0 ${
                 active
-                  ? "border-white bg-white/90 shadow-[0_14px_38px_rgba(16,24,40,0.09)]"
-                  : "border-white/45 bg-white/34 hover:bg-white/72"
+                  ? "border-white bg-white/92 shadow-[0_14px_38px_rgba(16,24,40,0.11)]"
+                  : "border-white/45 bg-white/34"
               }`}
             >
               <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-2xl ${active ? "bg-[#121824] text-white" : "text-zinc-600"}`}>

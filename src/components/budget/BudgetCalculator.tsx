@@ -281,7 +281,7 @@ export function BudgetCalculator() {
               onClick={() => setActiveTab("saved")}
             />
           </div>
-          {activeTab === "create" && <div className="mt-3 flex w-full gap-1 rounded-2xl bg-zinc-100 p-1 sm:w-fit"><ModeButton active={mode === "essential"} label="Essencial" onClick={() => setMode("essential")} /><ModeButton active={mode === "professional"} label="Profissional · Premium em breve" onClick={() => setMode("professional")} /></div>}
+          {activeTab === "create" && <div className="mt-3 flex w-full gap-1 rounded-2xl bg-zinc-100 p-1 sm:w-fit"><ModeButton active={mode === "essential"} label="Essencial" onClick={() => setMode("essential")} /><ModeButton active={mode === "professional"} label="Profissional" premium onClick={() => setMode("professional")} /></div>}
         </header>
 
         {activeTab === "saved" ? (
@@ -351,8 +351,12 @@ export function BudgetCalculator() {
 
 function EssentialBudget({ budget, updateBudget, updateSetting }: { budget: BudgetState; totals: ReturnType<typeof calculateBudget>; updateBudget: (updater: (current: BudgetState) => BudgetState) => void; updateSetting: (key: keyof BudgetState["settings"], value: number) => void }) {
   const simple = budget.simple;
-  const totalHours = simple.preProductionHours + simple.filmingHours + simple.editingHours;
-  const hourlyCost = ["Por hora", "Misto"].includes(simple.chargeType) ? totalHours * simple.hourlyRate : 0;
+  const preProduction = simple.preProductionHours * simple.preProductionHourlyRate;
+  const filming = simple.filmingHours * simple.filmingHourlyRate;
+  const editing = simple.editingHours * simple.editingHourlyRate;
+  const finishing = simple.finishingHours * simple.finishingHourlyRate;
+  const totalHours = simple.preProductionHours + simple.filmingHours + simple.editingHours + simple.finishingHours;
+  const hourlyCost = ["Por hora", "Misto"].includes(simple.chargeType) ? preProduction + filming + editing + finishing : 0;
   const dailyCost = ["Por diária", "Misto"].includes(simple.chargeType) ? simple.dayCount * simple.dayRate : 0;
   const base = hourlyCost + dailyCost + simple.equipment + simple.travel + simple.food + simple.otherCosts;
   const profit = base * (budget.settings.profitPercent / 100);
@@ -369,9 +373,9 @@ function EssentialBudget({ budget, updateBudget, updateSetting }: { budget: Budg
         simple: next,
         sections: {
           ...current.sections,
-          preProduction: setFirst("preProduction", usesHours ? next.preProductionHours * next.hourlyRate : 0),
-          southProduction: setFirst("southProduction", (usesHours ? next.filmingHours * next.hourlyRate : 0) + (usesDays ? next.dayCount * next.dayRate : 0)),
-          postProduction: setFirst("postProduction", usesHours ? next.editingHours * next.hourlyRate : 0),
+          preProduction: setFirst("preProduction", usesHours ? next.preProductionHours * next.preProductionHourlyRate : 0),
+          southProduction: setFirst("southProduction", (usesHours ? next.filmingHours * next.filmingHourlyRate : 0) + (usesDays ? next.dayCount * next.dayRate : 0)),
+          postProduction: setFirst("postProduction", usesHours ? (next.editingHours * next.editingHourlyRate) + (next.finishingHours * next.finishingHourlyRate) : 0),
           equipment: setFirst("equipment", next.equipment),
           travelCosts: setFirst("travelCosts", next.travel),
           teamCosts: setFirst("teamCosts", next.food),
@@ -381,15 +385,87 @@ function EssentialBudget({ budget, updateBudget, updateSetting }: { budget: Budg
     });
   }
 
-  return <div className="mt-5 grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px]"><main className="space-y-5"><section className="studio-card rounded-[28px] p-5 sm:p-7"><p className="text-xs font-semibold uppercase text-zinc-400">Orçamento essencial</p><h2 className="mt-3 text-2xl font-semibold">Descubra quanto cobrar, sem virar uma planilha.</h2><div className="mt-6 grid gap-4 sm:grid-cols-2"><Field label="Nome do projeto"><TextInput value={budget.projectName} onChange={(event) => updateBudget((current) => ({ ...current, projectName: event.target.value }))} /></Field><Field label="Cliente"><TextInput value={budget.client.company} onChange={(event) => updateBudget((current) => ({ ...current, client: { ...current.client, company: event.target.value } }))} /></Field><div className="sm:col-span-2"><ProjectLinkField value={budget.projectId} onChange={(projectId) => updateBudget((current) => ({ ...current, projectId }))} /></div><div className="sm:col-span-2"><Field label="Tipo de cobrança"><SelectInput value={simple.chargeType} onChange={(event) => changeSimple({ chargeType: event.target.value as SimpleBudgetData["chargeType"] })}><option>Por diária</option><option>Por hora</option><option>Misto</option></SelectInput></Field></div>{["Por hora", "Misto"].includes(simple.chargeType) && <><Field label="Horas de pré-produção"><NumberInput value={simple.preProductionHours} onValueChange={(value) => changeSimple({ preProductionHours: value })} /></Field><Field label="Horas de gravação"><NumberInput value={simple.filmingHours} onValueChange={(value) => changeSimple({ filmingHours: value })} /></Field><Field label="Horas de edição"><NumberInput value={simple.editingHours} onValueChange={(value) => changeSimple({ editingHours: value })} /></Field><Field label="Valor por hora"><NumberInput value={simple.hourlyRate} suffix="R$" onValueChange={(value) => changeSimple({ hourlyRate: value })} /></Field></>}{["Por diária", "Misto"].includes(simple.chargeType) && <><Field label="Quantidade de diárias"><NumberInput value={simple.dayCount} onValueChange={(value) => changeSimple({ dayCount: value })} /></Field><Field label="Valor por diária"><NumberInput value={simple.dayRate} suffix="R$" onValueChange={(value) => changeSimple({ dayRate: value })} /></Field></>}<Field label="Equipamentos"><NumberInput value={simple.equipment} suffix="R$" onValueChange={(value) => changeSimple({ equipment: value })} /></Field><Field label="Deslocamento"><NumberInput value={simple.travel} suffix="R$" onValueChange={(value) => changeSimple({ travel: value })} /></Field><Field label="Alimentação"><NumberInput value={simple.food} suffix="R$" onValueChange={(value) => changeSimple({ food: value })} /></Field><Field label="Outros custos"><NumberInput value={simple.otherCosts} suffix="R$" onValueChange={(value) => changeSimple({ otherCosts: value })} /></Field><Field label="Margem %"><NumberInput value={budget.settings.profitPercent} onValueChange={(value) => updateSetting("profitPercent", value)} /></Field><Field label="Imposto %"><NumberInput value={budget.settings.taxPercent} onValueChange={(value) => updateSetting("taxPercent", value)} /></Field></div></section></main><aside className="studio-card rounded-[28px] p-5 sm:p-6 xl:sticky xl:top-5"><p className="text-xs font-semibold uppercase text-zinc-400">Sugestão de cobrança</p><p className="mt-4 text-4xl font-semibold text-zinc-950">{formatCurrency(suggested)}</p><div className="mt-6 space-y-3 text-sm"><SimpleResult label="Custo base" value={formatCurrency(base)} /><SimpleResult label="Total de horas" value={`${totalHours}h`} /><SimpleResult label="Valor por hora aplicado" value={formatCurrency(simple.hourlyRate)} /><SimpleResult label="Lucro estimado" value={formatCurrency(profit)} /></div><p className="mt-6 text-xs leading-5 text-zinc-500">Use esta sugestão como ponto de partida e ajuste conforme escopo, experiência e valor percebido.</p></aside></div>;
+  const usesHours = ["Por hora", "Misto"].includes(simple.chargeType);
+
+  return (
+    <div className="mt-5 grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
+      <main className="space-y-5">
+        <section className="studio-card rounded-[28px] p-5 sm:p-7">
+          <p className="text-xs font-semibold uppercase text-zinc-400">Orçamento essencial</p>
+          <h2 className="mt-3 text-2xl font-semibold">Descubra quanto cobrar por cada etapa.</h2>
+          <div className="mt-6 grid gap-4 sm:grid-cols-2">
+            <Field label="Nome do projeto"><TextInput value={budget.projectName} onChange={(event) => updateBudget((current) => ({ ...current, projectName: event.target.value }))} /></Field>
+            <Field label="Cliente"><TextInput value={budget.client.company} onChange={(event) => updateBudget((current) => ({ ...current, client: { ...current.client, company: event.target.value } }))} /></Field>
+            <div className="sm:col-span-2"><ProjectLinkField value={budget.projectId} onChange={(projectId) => updateBudget((current) => ({ ...current, projectId }))} /></div>
+            <div className="sm:col-span-2"><Field label="Tipo de cobrança"><SelectInput value={simple.chargeType} onChange={(event) => changeSimple({ chargeType: event.target.value as SimpleBudgetData["chargeType"] })}><option>Por diária</option><option>Por hora</option><option>Misto</option></SelectInput></Field></div>
+          </div>
+
+          {usesHours && (
+            <div className="mt-6 grid gap-3 sm:grid-cols-2">
+              <WorkRateCard title="Gravação" hours={simple.filmingHours} rate={simple.filmingHourlyRate} total={filming} onHours={(value) => changeSimple({ filmingHours: value })} onRate={(value) => changeSimple({ filmingHourlyRate: value })} />
+              <WorkRateCard title="Edição" hours={simple.editingHours} rate={simple.editingHourlyRate} total={editing} onHours={(value) => changeSimple({ editingHours: value })} onRate={(value) => changeSimple({ editingHourlyRate: value })} />
+              <WorkRateCard title="Pré-produção" hours={simple.preProductionHours} rate={simple.preProductionHourlyRate} total={preProduction} onHours={(value) => changeSimple({ preProductionHours: value })} onRate={(value) => changeSimple({ preProductionHourlyRate: value })} />
+              <WorkRateCard title="Finalização" hours={simple.finishingHours} rate={simple.finishingHourlyRate} total={finishing} onHours={(value) => changeSimple({ finishingHours: value })} onRate={(value) => changeSimple({ finishingHourlyRate: value })} />
+            </div>
+          )}
+
+          <div className="mt-6 grid gap-4 sm:grid-cols-2">
+            {["Por diária", "Misto"].includes(simple.chargeType) && <>
+              <Field label="Quantidade de diárias"><NumberInput value={simple.dayCount} onValueChange={(value) => changeSimple({ dayCount: value })} /></Field>
+              <Field label="Valor por diária"><NumberInput value={simple.dayRate} suffix="R$" onValueChange={(value) => changeSimple({ dayRate: value })} /></Field>
+            </>}
+            <Field label="Equipamentos"><NumberInput value={simple.equipment} suffix="R$" onValueChange={(value) => changeSimple({ equipment: value })} /></Field>
+            <Field label="Deslocamento"><NumberInput value={simple.travel} suffix="R$" onValueChange={(value) => changeSimple({ travel: value })} /></Field>
+            <Field label="Alimentação"><NumberInput value={simple.food} suffix="R$" onValueChange={(value) => changeSimple({ food: value })} /></Field>
+            <Field label="Outros custos"><NumberInput value={simple.otherCosts} suffix="R$" onValueChange={(value) => changeSimple({ otherCosts: value })} /></Field>
+            <Field label="Margem %"><NumberInput value={budget.settings.profitPercent} onValueChange={(value) => updateSetting("profitPercent", value)} /></Field>
+            <Field label="Imposto %"><NumberInput value={budget.settings.taxPercent} onValueChange={(value) => updateSetting("taxPercent", value)} /></Field>
+          </div>
+        </section>
+      </main>
+
+      <aside className="studio-card rounded-[28px] p-5 sm:p-6 xl:sticky xl:top-5">
+        <p className="text-xs font-semibold uppercase text-zinc-400">Sugestão de cobrança</p>
+        <p className="mt-4 text-4xl font-semibold text-zinc-950">{formatCurrency(suggested)}</p>
+        <div className="mt-6 space-y-3 text-sm">
+          {usesHours && <>
+            <SimpleResult label="Gravação" value={formatCurrency(filming)} />
+            <SimpleResult label="Edição" value={formatCurrency(editing)} />
+            <SimpleResult label="Pré-produção" value={formatCurrency(preProduction)} />
+            <SimpleResult label="Finalização" value={formatCurrency(finishing)} />
+            <SimpleResult label="Total das etapas" value={formatCurrency(hourlyCost)} />
+          </>}
+          <SimpleResult label="Custo base" value={formatCurrency(base)} />
+          <SimpleResult label="Total de horas" value={`${totalHours}h`} />
+          <SimpleResult label="Lucro estimado" value={formatCurrency(profit)} />
+        </div>
+        <p className="mt-6 text-xs leading-5 text-zinc-500">Use esta sugestão como ponto de partida e ajuste conforme escopo, experiência e valor percebido.</p>
+      </aside>
+    </div>
+  );
+}
+
+function WorkRateCard({ title, hours, rate, total, onHours, onRate }: { title: string; hours: number; rate: number; total: number; onHours: (value: number) => void; onRate: (value: number) => void }) {
+  return (
+    <section className="rounded-2xl border border-zinc-200 bg-zinc-50/70 p-4">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="font-semibold text-zinc-900">{title}</h3>
+        <span className="text-sm font-semibold text-zinc-500">{formatCurrency(total)}</span>
+      </div>
+      <div className="mt-4 grid grid-cols-2 gap-3">
+        <Field label="Quantidade de horas"><NumberInput value={hours} onValueChange={onHours} /></Field>
+        <Field label="Valor por hora"><NumberInput value={rate} suffix="R$" onValueChange={onRate} /></Field>
+      </div>
+    </section>
+  );
 }
 
 function SimpleResult({ label, value }: { label: string; value: string }) {
   return <div className="flex items-center justify-between gap-4 border-b border-zinc-100 pb-3"><span className="text-zinc-500">{label}</span><strong className="text-right text-zinc-900">{value}</strong></div>;
 }
 
-function ModeButton({ active, label, onClick }: { active: boolean; label: string; onClick: () => void }) {
-  return <button type="button" onClick={onClick} className={`min-h-10 rounded-xl px-4 text-xs font-semibold transition ${active ? "bg-white text-zinc-950 shadow-sm" : "text-zinc-500"}`}>{label}</button>;
+function ModeButton({ active, label, premium = false, onClick }: { active: boolean; label: string; premium?: boolean; onClick: () => void }) {
+  return <button type="button" onClick={onClick} className={`inline-flex min-h-10 items-center gap-2 rounded-xl border border-transparent px-4 text-xs font-semibold transition ${premium ? "studio-premium" : active ? "bg-white text-zinc-950 shadow-sm" : "text-zinc-500"}`}>{label}{premium && <span className="studio-premium-badge rounded-full px-2 py-0.5 text-[9px] font-bold uppercase">Premium</span>}</button>;
 }
 
 function EditingHeader({
@@ -513,6 +589,7 @@ async function persistProjectBudget(
 
 function normalizeBudget(stored: Partial<BudgetState>): BudgetState {
   const defaults = createDefaultBudget(stored.id || crypto.randomUUID());
+  const legacyHourlyRate = safeNumber(stored.simple?.hourlyRate);
   return {
     ...defaults,
     ...stored,
@@ -520,8 +597,20 @@ function normalizeBudget(stored: Partial<BudgetState>): BudgetState {
     briefing: { ...defaults.briefing, ...stored.briefing },
     sections: { ...defaults.sections, ...stored.sections },
     settings: { ...defaults.settings, ...stored.settings },
-    simple: { ...defaults.simple, ...stored.simple },
+    simple: {
+      ...defaults.simple,
+      ...stored.simple,
+      preProductionHourlyRate: safeNumber(stored.simple?.preProductionHourlyRate, legacyHourlyRate),
+      filmingHourlyRate: safeNumber(stored.simple?.filmingHourlyRate, legacyHourlyRate),
+      editingHourlyRate: safeNumber(stored.simple?.editingHourlyRate, legacyHourlyRate),
+      finishingHours: safeNumber(stored.simple?.finishingHours),
+      finishingHourlyRate: safeNumber(stored.simple?.finishingHourlyRate, legacyHourlyRate),
+    },
   };
+}
+
+function safeNumber(value: unknown, fallback = 0) {
+  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 }
 
 function ClientCard({
