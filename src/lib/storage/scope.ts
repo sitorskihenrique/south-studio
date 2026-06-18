@@ -29,13 +29,12 @@ export function readScopedStorage<T>(baseKey: string, fallback: T): T {
     if (!userId) return fallback;
 
     const legacyOwner = window.localStorage.getItem(legacyOwnerKey);
-    if (legacyOwner && legacyOwner !== userId) return fallback;
+    if (legacyOwner !== userId) return fallback;
 
     const legacyValue = window.localStorage.getItem(baseKey);
     if (!legacyValue) return fallback;
 
     window.localStorage.setItem(scopedKey, legacyValue);
-    window.localStorage.setItem(legacyOwnerKey, userId);
     return JSON.parse(legacyValue) as T;
   } catch {
     return fallback;

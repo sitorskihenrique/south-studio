@@ -62,7 +62,7 @@ export function AccountSettings() {
           <section className="studio-card rounded-[28px] p-5">
             <span className="grid h-12 w-12 place-items-center rounded-2xl bg-teal-50 text-teal-700"><CloudUpload size={22} /></span>
             <h2 className="mt-5 text-xl font-semibold text-zinc-950">Migrar dados locais</h2>
-            <p className="mt-2 text-sm leading-6 text-zinc-500">Importa projetos, orçamentos, planos e tarefas deste navegador que ainda não existem na sua conta.</p>
+            <p className="mt-2 text-sm leading-6 text-zinc-500">Importa apenas projetos, orçamentos, planos e tarefas deste navegador que já pertencem à conta atual e ainda não existem na nuvem.</p>
             <button type="button" onClick={migrateLocalData} disabled={loading} className="mt-6 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-zinc-200 px-5 text-sm font-semibold text-zinc-700 disabled:opacity-60">
               <CloudUpload size={17} />{loading ? "Migrando..." : "Migrar dados locais para minha conta"}
             </button>

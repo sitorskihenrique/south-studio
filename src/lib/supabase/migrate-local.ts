@@ -27,7 +27,7 @@ export async function migrateLocalCollectionsOnce(userId: string) {
 
   if (![projects, tasks, budgets, plans].every((result) => result.authenticated && result.ok)) return;
 
-  const operations: Promise<unknown>[] = [];
+  const operations: Array<Promise<{ authenticated: boolean; ok: boolean }>> = [];
   const localProjects = readScopedStorage<StudioProject[]>(projectsStorageKey, []);
   const localTasks = readScopedStorage<StudioTask[]>(tasksStorageKey, []);
   const localBudgets = readScopedStorage<SavedBudget[]>(savedBudgetsStorageKey, []);
@@ -46,8 +46,10 @@ export async function migrateLocalCollectionsOnce(userId: string) {
     operations.push(replaceCloudItems("film_plans", localPlans, (item) => item.projectName || "Plano de filmagem"));
   }
 
-  await Promise.all(operations);
-  window.localStorage.setItem(marker, "done");
+  const results = await Promise.all(operations);
+  if (results.every((result) => result.authenticated && result.ok)) {
+    window.localStorage.setItem(marker, "done");
+  }
 }
 
 export async function importMissingLocalCollections() {

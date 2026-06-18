@@ -5,7 +5,7 @@ import { StudioSidebar } from "@/components/StudioSidebar";
 import { useAuthSession } from "@/components/auth/AuthSessionProvider";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const { ready } = useAuthSession();
+  const { ready, error, retry } = useAuthSession();
 
   return (
     <div className="studio-app min-h-[100dvh] overflow-x-hidden bg-[#eceef2] pb-[calc(5.5rem+env(safe-area-inset-bottom))] text-zinc-950 lg:pb-0">
@@ -14,8 +14,23 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <StudioSidebar />
         </Suspense>
         <main className="min-h-[calc(100dvh-3rem)] min-w-0 overflow-hidden rounded-[26px] border border-white/70 bg-white/74 shadow-[0_26px_90px_rgba(10,14,24,0.10)] backdrop-blur-2xl sm:rounded-[30px]">
-          {ready ? children : <AppLoading />}
+          {!ready ? <AppLoading /> : error ? <AppError message={error} onRetry={retry} /> : children}
         </main>
+      </div>
+    </div>
+  );
+}
+
+function AppError({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <div className="grid min-h-[420px] place-items-center p-6 text-center">
+      <div className="max-w-md rounded-3xl border border-zinc-200 bg-white p-7 shadow-sm">
+        <h1 className="text-xl font-semibold text-zinc-950">Não foi possível abrir seu workspace.</h1>
+        <p className="mt-3 text-sm leading-6 text-zinc-500">{message}</p>
+        <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
+          <button type="button" onClick={onRetry} className="min-h-12 rounded-xl bg-zinc-950 px-5 text-sm font-semibold text-white">Tentar novamente</button>
+          <a href="/login" className="inline-flex min-h-12 items-center justify-center rounded-xl border border-zinc-200 px-5 text-sm font-semibold text-zinc-700">Voltar ao login</a>
+        </div>
       </div>
     </div>
   );

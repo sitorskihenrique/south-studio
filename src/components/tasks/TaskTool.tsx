@@ -17,7 +17,7 @@ import {
   type TaskDraft,
   type TaskStatusFilter,
 } from "@/lib/tasks/types";
-import { readCloudItems, replaceCloudItems } from "@/lib/supabase/data";
+import { deleteCloudItem, readCloudItems, upsertCloudItem } from "@/lib/supabase/data";
 import { TaskCalendar } from "./TaskCalendar";
 import { TaskCard } from "./TaskCard";
 import { TaskFormSheet } from "./TaskFormSheet";
@@ -74,18 +74,35 @@ export function TaskTool() {
   const visibleTasks = useMemo(() => filterTasks(tasks, selectedDay, status, category, search), [category, search, selectedDay, status, tasks]);
   const summary = taskSummary(tasks);
 
-  function persist(next: StudioTask[], successMessage: string) {
+  function persistUpsert(task: StudioTask, next: StudioTask[], successMessage: string) {
     setTasks(next);
     setMessage(successMessage);
-    replaceCloudItems("tasks", next, (task) => task.title || "Tarefa", { deleteMissing: true }).then((result) => {
+    writeTasks(next);
+    upsertCloudItem("tasks", task, task.title || "Tarefa").then((result) => {
       if (!result.authenticated) {
-        const ok = writeTasks(next);
-        if (!ok) setMessage("Não foi possível salvar as alterações neste navegador.");
+        setStorageLabel("Salvo neste dispositivo");
         return;
       }
-      setStorageLabel(result.ok ? "Sincronizado na conta" : "Salvo neste dispositivo");
-      writeTasks(next);
-      if (!result.ok) setMessage(`${successMessage} Sincronização pendente.`);
+      setStorageLabel(result.ok ? "Sincronizado na conta" : "Sincronização pendente");
+      if (!result.ok) setMessage(result.queued
+        ? `${successMessage} Será sincronizada automaticamente.`
+        : "Não foi possível preservar a alteração. Tente novamente.");
+    });
+  }
+
+  function persistDelete(taskId: string, next: StudioTask[], successMessage: string) {
+    setTasks(next);
+    setMessage(successMessage);
+    writeTasks(next);
+    deleteCloudItem("tasks", taskId).then((result) => {
+      if (!result.authenticated) {
+        setStorageLabel("Salvo neste dispositivo");
+        return;
+      }
+      setStorageLabel(result.ok ? "Sincronizado na conta" : "Sincronização pendente");
+      if (!result.ok) setMessage(result.queued
+        ? `${successMessage} Será sincronizada automaticamente.`
+        : "Não foi possível preservar a exclusão. Tente novamente.");
     });
   }
 
@@ -110,34 +127,55 @@ export function TaskTool() {
     if (draft.specificDate && !/^\d{4}-\d{2}-\d{2}$/.test(draft.specificDate)) return setMessage("Escolha uma data específica válida.");
 
     if (editingId) {
-      persist(tasks.map((task) => task.id === editingId ? { ...task, ...draft, title } : task), "Tarefa atualizada.");
+      const current = tasks.find((task) => task.id === editingId);
+      if (!current) return setMessage("Não foi possível localizar a tarefa.");
+      const updated = { ...current, ...draft, title };
+      persistUpsert(updated, tasks.map((task) => task.id === editingId ? updated : task), "Tarefa atualizada.");
     } else {
-      persist([{ ...draft, title, id: crypto.randomUUID(), createdAt: new Date().toISOString() }, ...tasks], "Tarefa criada.");
+      const created = { ...draft, title, id: crypto.randomUUID(), createdAt: new Date().toISOString() };
+      persistUpsert(created, [created, ...tasks], "Tarefa criada.");
     }
     setSheetOpen(false);
   }
 
   function toggleTask(task: StudioTask) {
-    const nextStatus = task.status === "Concluída" ? "A fazer" : "Concluída";
-    persist(tasks.map((item) => item.id === task.id ? { ...item, status: nextStatus } : item), nextStatus === "Concluída" ? "Tarefa concluída." : "Tarefa reaberta.");
+    const nextStatus: StudioTask["status"] = task.status === "Concluída" ? "A fazer" : "Concluída";
+    const updated: StudioTask = { ...task, status: nextStatus };
+    persistUpsert(updated, tasks.map((item) => item.id === task.id ? updated : item), nextStatus === "Concluída" ? "Tarefa concluída." : "Tarefa reaberta.");
   }
 
   function duplicateTask(task: StudioTask) {
-    persist([{ ...task, id: crypto.randomUUID(), title: `Cópia de ${task.title}`, status: "A fazer", createdAt: new Date().toISOString() }, ...tasks], "Tarefa duplicada.");
+    const copy: StudioTask = { ...task, id: crypto.randomUUID(), title: `Cópia de ${task.title}`, status: "A fazer", createdAt: new Date().toISOString() };
+    persistUpsert(copy, [copy, ...tasks], "Tarefa duplicada.");
   }
 
   function deleteTask(task: StudioTask) {
     if (!window.confirm(`Excluir a tarefa "${task.title}"?`)) return;
-    persist(tasks.filter((item) => item.id !== task.id), "Tarefa excluída.");
+    persistDelete(task.id, tasks.filter((item) => item.id !== task.id), "Tarefa excluída.");
   }
 
   function moveTask(task: StudioTask, day: TaskDay) {
-    persist(tasks.map((item) => item.id === task.id ? { ...item, day } : item), `Tarefa movida para ${day}.`);
+    const updated: StudioTask = { ...task, day };
+    persistUpsert(updated, tasks.map((item) => item.id === task.id ? updated : item), `Tarefa movida para ${day}.`);
   }
 
   function clearCompleted() {
     if (!summary.completed || !window.confirm("Remover todas as tarefas concluídas?")) return;
-    persist(tasks.filter((task) => task.status !== "Concluída"), "Tarefas concluídas removidas.");
+    const completed = tasks.filter((task) => task.status === "Concluída");
+    const next = tasks.filter((task) => task.status !== "Concluída");
+    setTasks(next);
+    writeTasks(next);
+    setMessage("Tarefas concluídas removidas.");
+    Promise.all(completed.map((task) => deleteCloudItem("tasks", task.id))).then((results) => {
+      const authenticated = results.some((result) => result.authenticated);
+      const synced = results.every((result) => result.ok);
+      setStorageLabel(!authenticated ? "Salvo neste dispositivo" : synced ? "Sincronizado na conta" : "Sincronização pendente");
+      if (authenticated && !synced) {
+        setMessage(results.every((result) => result.ok || result.queued)
+          ? "Tarefas removidas. A sincronização continuará automaticamente."
+          : "Algumas exclusões não puderam ser preservadas. Tente novamente.");
+      }
+    });
   }
 
   function openDay(day: TaskDay) {
