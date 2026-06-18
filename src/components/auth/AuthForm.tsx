@@ -83,7 +83,8 @@ export function AuthForm({ mode, nextPath = "/dashboard", missingConfig }: { mod
 
   return (
     <main className="studio-auth-backdrop min-h-[100dvh] bg-black p-3 text-white sm:p-5">
-      <div className="studio-auth-liquid mx-auto grid min-h-[calc(100dvh-1.5rem)] max-w-[1480px] overflow-hidden rounded-[26px] border border-white/10 shadow-[0_32px_110px_rgba(0,0,0,0.55)] sm:min-h-[calc(100dvh-2.5rem)] sm:rounded-[32px] lg:grid-cols-[1fr_480px]">
+      <div className="studio-auth-surface mx-auto grid min-h-[calc(100dvh-1.5rem)] max-w-[1480px] overflow-hidden rounded-[26px] border border-white/10 shadow-[0_32px_110px_rgba(0,0,0,0.55)] sm:min-h-[calc(100dvh-2.5rem)] sm:rounded-[32px] lg:grid-cols-[1fr_480px]">
+        <span className="studio-liquid-detail" aria-hidden="true" />
         <section className="hidden flex-col justify-between p-10 lg:flex lg:p-14">
           <Link href="/"><BrandLogo className="w-[190px]" priority /></Link>
           <div className="max-w-3xl py-14">
@@ -96,16 +97,16 @@ export function AuthForm({ mode, nextPath = "/dashboard", missingConfig }: { mod
         <section className="m-2 flex flex-col rounded-[22px] border border-white/12 bg-black/56 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-2xl sm:m-4 sm:p-8 lg:m-5 lg:p-9">
           <div className="flex items-center justify-between gap-4 lg:justify-end">
             <Link href="/" className="lg:hidden"><BrandLogo className="w-[132px]" priority /></Link>
-            <nav className="flex gap-1 rounded-full border border-white/10 bg-white/[0.04] p-1">
-              <Link href={`/login?next=${encodeURIComponent(nextPath)}`} className={`rounded-full px-4 py-2 text-sm font-semibold ${isLogin ? "bg-white text-[#0b0e15]" : "text-white/48"}`}>Login</Link>
-              <Link href={`/cadastro?next=${encodeURIComponent(nextPath)}`} className={`rounded-full px-4 py-2 text-sm font-semibold ${!isLogin ? "bg-white text-[#0b0e15]" : "text-white/48"}`}>Cadastrar</Link>
+            <nav className="flex gap-1 rounded-full border border-white/16 bg-black/35 p-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.28)]">
+              <Link href={`/login?next=${encodeURIComponent(nextPath)}`} className={`inline-flex min-h-11 min-w-[86px] items-center justify-center rounded-full px-4 py-2.5 text-center text-sm font-semibold ${isLogin ? "bg-white text-[#0b0e15] shadow-lg shadow-white/10" : "text-white/62 hover:bg-white/[0.08] hover:text-white"}`}>Login</Link>
+              <Link href={`/cadastro?next=${encodeURIComponent(nextPath)}`} className={`inline-flex min-h-11 min-w-[104px] items-center justify-center rounded-full px-4 py-2.5 text-center text-sm font-semibold ${!isLogin ? "bg-white text-[#0b0e15] shadow-lg shadow-white/10" : "text-white/62 hover:bg-white/[0.08] hover:text-white"}`}>Cadastrar</Link>
             </nav>
           </div>
 
           <div className="my-auto py-10">
             <p className="text-xs font-bold uppercase text-white/36">{isLogin ? "Acesso" : "Nova conta"}</p>
             <h2 className="mt-3 text-3xl font-semibold text-white">{isLogin ? "Entre no seu workspace." : "Crie seu workspace."}</h2>
-            <p className="mt-3 text-sm leading-6 text-white/45">Organize projetos, tarefas, orçamentos e produção em um só lugar.</p>
+            <p className="mt-3 text-sm leading-6 text-white/45">{isLogin ? "Acesse sua conta para continuar." : "Configure seu acesso em poucos passos."}</p>
 
             <button type="button" onClick={signInWithGoogle} disabled={loading} className="mt-7 min-h-12 w-full rounded-xl border border-white/14 bg-white/[0.07] px-4 text-sm font-semibold text-white transition hover:bg-white/[0.12] disabled:opacity-60">
               Continuar com Google

@@ -62,12 +62,12 @@ export function StudioSidebar() {
   }
 
   return (
-    <aside className="rounded-[26px] border border-white/80 bg-white/60 p-3 shadow-[0_22px_70px_rgba(16,24,40,0.09)] backdrop-blur-2xl sm:rounded-[30px] lg:flex lg:min-h-[calc(100dvh-3rem)] lg:flex-col lg:p-4">
-      <Link href="/dashboard" className="flex min-h-14 items-center rounded-[18px] bg-[#090b10] px-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
-        <BrandLogo className="w-[142px]" priority />
+    <aside className="rounded-[26px] border border-white/80 bg-white/60 p-3 shadow-[0_22px_70px_rgba(16,24,40,0.09)] backdrop-blur-2xl sm:rounded-[30px] lg:sticky lg:top-6 lg:grid lg:h-[calc(100dvh-3rem)] lg:grid-rows-[auto_minmax(0,1fr)_auto] lg:p-4">
+      <Link href="/dashboard" className="flex min-h-16 items-center justify-center rounded-[18px] border border-white/70 bg-white/46 px-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.78),0_10px_30px_rgba(15,20,32,0.05)]">
+        <BrandLogo tone="dark" className="w-[148px]" priority />
       </Link>
 
-      <nav className="hide-scrollbar mt-3 flex gap-2 overflow-x-auto pb-1 lg:mt-6 lg:flex-col lg:overflow-visible lg:pb-0">
+      <nav className="hide-scrollbar mt-3 flex gap-2 overflow-x-auto pb-1 lg:mt-5 lg:min-h-0 lg:flex-col lg:overflow-y-auto lg:overflow-x-hidden lg:pb-3 lg:pr-1">
         {navigationGroups.map((group) => (
           <div key={group.label} className="contents lg:block">
             <p className="mb-2 mt-5 hidden px-3 text-[10px] font-bold uppercase text-zinc-400 first:mt-0 lg:block">{group.label}</p>
@@ -101,14 +101,14 @@ export function StudioSidebar() {
         ))}
       </nav>
 
-      <div className="mt-3 hidden rounded-[20px] border border-white/70 bg-white/45 p-3 lg:mt-auto lg:block">
+      <div className="mt-2 hidden rounded-[20px] border border-white/75 bg-white/54 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] lg:block">
         <p className="truncate text-sm font-semibold text-zinc-900">{displayName(user)}</p>
-        <p className="mt-1 truncate text-xs text-zinc-500">{user?.email || "Conta Cologne"}</p>
+        <p className="mt-1 truncate text-xs leading-5 text-zinc-500">{user?.email || "Conta Cologne"}</p>
         <button
           type="button"
           onClick={signOut}
           disabled={signingOut}
-          className="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl bg-[#121824] px-3 text-xs font-semibold text-white disabled:opacity-60"
+          className="mt-2 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl bg-[#0b0e15] px-3 text-xs font-semibold text-white transition hover:bg-[#171b25] disabled:opacity-60"
         >
           <LogOut size={15} />
           {signingOut ? "Saindo..." : "Sair"}

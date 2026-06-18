@@ -1,4 +1,4 @@
-const CACHE_NAME = "cologne-os-assets-v2";
+const CACHE_NAME = "cologne-os-assets-v3";
 const PUBLIC_ASSETS = [
   "/manifest.json",
   "/icons/icon-192.png",
@@ -6,7 +6,7 @@ const PUBLIC_ASSETS = [
   "/icons/icon-maskable-512.png",
   "/icons/apple-touch-icon.png",
   "/brand/cologne-wordmark.webp",
-  "/brand/cologne-hero.webp",
+  "/brand/cologne-wordmark-dark.webp",
   "/brand/cologne-liquid.webp"
 ];
 

@@ -105,7 +105,7 @@ export function DashboardExperience() {
 
   return (
     <section className="h-full overflow-y-auto p-3 sm:p-5 lg:p-6">
-      <div className="min-h-full rounded-[24px] border border-white/10 bg-[#090c13] p-5 text-white shadow-[0_28px_80px_rgba(8,12,20,0.24)] sm:p-8 lg:rounded-[28px] lg:p-12">
+      <div className="studio-dashboard-surface min-h-full rounded-[24px] border border-white/10 p-5 text-white shadow-[0_28px_80px_rgba(8,12,20,0.24)] sm:p-8 lg:rounded-[28px] lg:p-12">
           <div className="mx-auto flex h-full max-w-[1040px] flex-col">
             <div className="pt-2 sm:pt-4 lg:pt-10">
               <p className="text-sm font-semibold uppercase text-white/35">Workspace audiovisual</p>

@@ -3,13 +3,15 @@ import Image from "next/image";
 export function BrandLogo({
   className = "",
   priority = false,
+  tone = "light",
 }: {
   className?: string;
   priority?: boolean;
+  tone?: "light" | "dark";
 }) {
   return (
     <Image
-      src="/brand/cologne-wordmark.webp"
+      src={tone === "dark" ? "/brand/cologne-wordmark-dark.webp" : "/brand/cologne-wordmark.webp"}
       alt="Cologne"
       width={1000}
       height={155}
