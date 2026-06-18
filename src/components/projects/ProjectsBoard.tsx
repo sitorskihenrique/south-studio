@@ -9,11 +9,11 @@ import { projectStatuses, type ProjectDetailTab, type ProjectDraft, type Project
 import { deleteCloudItem, readCloudItems, upsertCloudItem } from "@/lib/supabase/data";
 import { ProjectDetailModal } from "./ProjectDetailModal";
 import { ProjectFormModal } from "./ProjectFormModal";
-import { readTasks } from "@/lib/tasks/storage";
+import { readTasks, writeTasks } from "@/lib/tasks/storage";
 import type { StudioTask } from "@/lib/tasks/types";
-import { readLocalStorage, savedBudgetsStorageKey } from "@/lib/budget/storage";
+import { readLocalStorage, savedBudgetsStorageKey, writeLocalStorage } from "@/lib/budget/storage";
 import type { SavedBudget } from "@/lib/budget/types";
-import { readFilmPlanStorage, savedFilmPlansKey } from "@/lib/film-plan/storage";
+import { readFilmPlanStorage, savedFilmPlansKey, writeFilmPlanStorage } from "@/lib/film-plan/storage";
 import type { SavedFilmPlan } from "@/lib/film-plan/types";
 import { ToolHeader } from "@/components/ui/ToolHeader";
 
@@ -50,13 +50,61 @@ export function ProjectsBoard() {
     setBudgets(readLocalStorage<SavedBudget[]>(savedBudgetsStorageKey, []));
     setPlans(readFilmPlanStorage<SavedFilmPlan[]>(savedFilmPlansKey, []));
     readCloudItems<StudioProject>("projects").then((result) => {
-      if (!mounted || !result.authenticated || !result.ok || !result.items.length) return;
-      setProjects(normalizeProjects(result.items));
+      if (!mounted || !result.authenticated || !result.ok) return;
+      const cloudProjects = normalizeProjects(result.items);
+      setProjects(cloudProjects);
+      writeProjects(cloudProjects);
     });
-    readCloudItems<StudioTask>("tasks").then((result) => { if (mounted && result.ok && result.items.length) setTasks(result.items); });
-    readCloudItems<SavedBudget>("budgets").then((result) => { if (mounted && result.ok && result.items.length) setBudgets(result.items); });
-    readCloudItems<SavedFilmPlan>("film_plans").then((result) => { if (mounted && result.ok && result.items.length) setPlans(result.items); });
+    readCloudItems<StudioTask>("tasks").then((result) => {
+      if (mounted && result.authenticated && result.ok) {
+        setTasks(result.items);
+        writeTasks(result.items);
+      }
+    });
+    readCloudItems<SavedBudget>("budgets").then((result) => {
+      if (mounted && result.authenticated && result.ok) {
+        setBudgets(result.items);
+        writeLocalStorage(savedBudgetsStorageKey, result.items);
+      }
+    });
+    readCloudItems<SavedFilmPlan>("film_plans").then((result) => {
+      if (mounted && result.authenticated && result.ok) {
+        setPlans(result.items);
+        writeFilmPlanStorage(savedFilmPlansKey, result.items);
+      }
+    });
     return () => { mounted = false; };
+  }, []);
+
+  useEffect(() => {
+    const refresh = () => {
+      Promise.all([
+        readCloudItems<StudioProject>("projects", { force: true }),
+        readCloudItems<StudioTask>("tasks", { force: true }),
+        readCloudItems<SavedBudget>("budgets", { force: true }),
+        readCloudItems<SavedFilmPlan>("film_plans", { force: true }),
+      ]).then(([projectResult, taskResult, budgetResult, planResult]) => {
+        if (projectResult.authenticated && projectResult.ok) {
+          const cloudProjects = normalizeProjects(projectResult.items);
+          setProjects(cloudProjects);
+          writeProjects(cloudProjects);
+        }
+        if (taskResult.authenticated && taskResult.ok) {
+          setTasks(taskResult.items);
+          writeTasks(taskResult.items);
+        }
+        if (budgetResult.authenticated && budgetResult.ok) {
+          setBudgets(budgetResult.items);
+          writeLocalStorage(savedBudgetsStorageKey, budgetResult.items);
+        }
+        if (planResult.authenticated && planResult.ok) {
+          setPlans(planResult.items);
+          writeFilmPlanStorage(savedFilmPlansKey, planResult.items);
+        }
+      });
+    };
+    window.addEventListener("focus", refresh);
+    return () => window.removeEventListener("focus", refresh);
   }, []);
 
   const visibleProjects = useMemo(() => {
@@ -71,12 +119,12 @@ export function ProjectsBoard() {
     try {
       const normalized = normalizeProject(project);
       const next = projects.some((item) => item.id === normalized.id) ? projects.map((item) => item.id === normalized.id ? normalized : item) : [normalized, ...projects];
-      if (!writeProjects(next)) throw new Error("localStorage unavailable");
       setProjects(next);
       setActiveProject((current) => current?.id === normalized.id ? normalized : current);
       setMessage(success);
       const result = await upsertCloudItem("projects", normalized, normalized.title);
       if (result.authenticated && !result.ok) setMessage(`${success} Sincronização pendente.`);
+      writeProjects(next);
       return true;
     } catch {
       setMessage("Não foi possível criar o projeto. Tente novamente.");
@@ -133,10 +181,10 @@ export function ProjectsBoard() {
     if (!window.confirm(`Excluir o projeto "${project.title}"? Os itens vinculados serão mantidos.`)) return;
     try {
       const next = projects.filter((item) => item.id !== project.id);
-      if (!writeProjects(next)) throw new Error("localStorage unavailable");
       setProjects(next);
       setActiveProject(null);
       const result = await deleteCloudItem("projects", project.id);
+      writeProjects(next);
       setMessage(result.authenticated && !result.ok ? "Projeto removido deste dispositivo. Sincronização pendente." : "Projeto excluído.");
     } catch {
       setMessage("Não foi possível excluir o projeto. Tente novamente.");

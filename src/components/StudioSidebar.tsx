@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import {
   CalendarDays,
@@ -11,8 +11,10 @@ import {
   LayoutDashboard,
   ListChecks,
   LogOut,
+  Menu,
   Settings,
   WalletCards,
+  X,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuthSession } from "@/components/auth/AuthSessionProvider";
@@ -50,7 +52,12 @@ export function StudioSidebar() {
   const router = useRouter();
   const { user } = useAuthSession();
   const [signingOut, setSigningOut] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const calendarView = pathname === "/tarefas" && searchParams.get("view") === "calendar";
+
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [pathname, searchParams]);
 
   async function signOut() {
     const supabase = createClient();
@@ -62,7 +69,8 @@ export function StudioSidebar() {
   }
 
   return (
-    <aside className="rounded-[26px] border border-white/80 bg-white/60 p-3 shadow-[0_22px_70px_rgba(16,24,40,0.09)] backdrop-blur-2xl sm:rounded-[30px] lg:sticky lg:top-6 lg:grid lg:h-[calc(100dvh-3rem)] lg:grid-rows-[auto_minmax(0,1fr)_auto] lg:p-4">
+    <>
+    <aside className="hidden rounded-[26px] border border-white/80 bg-white/60 p-3 shadow-[0_22px_70px_rgba(16,24,40,0.09)] backdrop-blur-2xl sm:rounded-[30px] lg:sticky lg:top-6 lg:grid lg:h-[calc(100dvh-3rem)] lg:grid-rows-[auto_minmax(0,1fr)_auto] lg:p-4">
       <Link href="/dashboard" className="flex min-h-16 items-center justify-center rounded-[18px] border border-white/70 bg-white/46 px-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.78),0_10px_30px_rgba(15,20,32,0.05)]">
         <BrandLogo tone="dark" className="w-[148px]" priority />
       </Link>
@@ -115,6 +123,58 @@ export function StudioSidebar() {
         </button>
       </div>
     </aside>
+
+    {mobileMenuOpen && (
+      <div className="fixed inset-0 z-[90] bg-black/28 backdrop-blur-sm lg:hidden" onClick={() => setMobileMenuOpen(false)}>
+        <div
+          className="absolute inset-x-3 bottom-[calc(5.4rem+env(safe-area-inset-bottom))] rounded-[24px] border border-white/80 bg-white/92 p-3 shadow-[0_28px_80px_rgba(10,14,24,0.24)] backdrop-blur-2xl"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <div className="mb-2 flex items-center justify-between px-2 py-1">
+            <BrandLogo tone="dark" className="w-[126px]" />
+            <button type="button" onClick={() => setMobileMenuOpen(false)} aria-label="Fechar menu" className="grid h-11 w-11 place-items-center rounded-full bg-zinc-100 text-zinc-700">
+              <X size={19} />
+            </button>
+          </div>
+          <div className="grid gap-1.5">
+            <MobileMenuLink href="/tarefas?view=calendar" label="Calendário" detail="Prazos e entregas" icon={CalendarDays} />
+            <MobileMenuLink href="/plano-de-filmagem" label="Roteiros" detail="Planos de filmagem" icon={Clapperboard} />
+            <MobileMenuLink href="/configuracoes" label="Configurações" detail="Conta e aplicativo" icon={Settings} />
+          </div>
+          <button type="button" onClick={signOut} disabled={signingOut} className="mt-2 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#0b0e15] px-4 text-sm font-semibold text-white disabled:opacity-60">
+            <LogOut size={17} />{signingOut ? "Saindo..." : "Sair"}
+          </button>
+        </div>
+      </div>
+    )}
+
+    <nav className="fixed inset-x-3 bottom-[max(0.6rem,env(safe-area-inset-bottom))] z-[100] grid grid-cols-5 rounded-[22px] border border-white/80 bg-white/88 p-1.5 shadow-[0_18px_55px_rgba(10,14,24,0.2)] backdrop-blur-2xl lg:hidden" aria-label="Navegação principal">
+      <MobileNavLink href="/dashboard" label="Início" icon={LayoutDashboard} active={pathname === "/dashboard"} />
+      <MobileNavLink href="/projetos" label="Projetos" icon={Grid2X2} active={pathname === "/projetos"} />
+      <MobileNavLink href="/tarefas" label="Tarefas" icon={ListChecks} active={pathname === "/tarefas" && !calendarView} />
+      <MobileNavLink href="/calculadora" label="Orçamentos" icon={WalletCards} active={pathname === "/calculadora"} />
+      <button type="button" onClick={() => setMobileMenuOpen(true)} className={`flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-[17px] px-1 text-[10px] font-semibold ${mobileMenuOpen || ["/plano-de-filmagem", "/configuracoes"].includes(pathname) || calendarView ? "bg-[#0b0e15] text-white" : "text-zinc-500"}`}>
+        <Menu size={20} /><span className="max-w-full truncate">Mais</span>
+      </button>
+    </nav>
+    </>
+  );
+}
+
+function MobileNavLink({ href, label, icon: Icon, active }: { href: string; label: string; icon: typeof LayoutDashboard; active: boolean }) {
+  return (
+    <Link href={href} className={`flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-[17px] px-1 text-[10px] font-semibold ${active ? "bg-[#0b0e15] text-white" : "text-zinc-500"}`}>
+      <Icon size={20} /><span className="max-w-full truncate">{label}</span>
+    </Link>
+  );
+}
+
+function MobileMenuLink({ href, label, detail, icon: Icon }: { href: string; label: string; detail: string; icon: typeof LayoutDashboard }) {
+  return (
+    <Link href={href} className="flex min-h-14 items-center gap-3 rounded-[17px] border border-zinc-100 bg-white px-3">
+      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[14px] bg-zinc-100 text-zinc-700"><Icon size={19} /></span>
+      <span className="min-w-0"><span className="block text-sm font-semibold text-zinc-900">{label}</span><span className="block truncate text-xs text-zinc-500">{detail}</span></span>
+    </Link>
   );
 }
 

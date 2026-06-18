@@ -4,13 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CloudUpload, LogOut, ShieldCheck, UserRound } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { readLocalStorage, savedBudgetsStorageKey } from "@/lib/budget/storage";
-import type { SavedBudget } from "@/lib/budget/types";
-import { readFilmPlanStorage, savedFilmPlansKey } from "@/lib/film-plan/storage";
-import type { SavedFilmPlan } from "@/lib/film-plan/types";
-import { readTasks } from "@/lib/tasks/storage";
-import type { StudioTask } from "@/lib/tasks/types";
-import { replaceCloudItems } from "@/lib/supabase/data";
+import { importMissingLocalCollections } from "@/lib/supabase/migrate-local";
 import { InstallApp } from "@/components/pwa/InstallApp";
 import { useAuthSession } from "@/components/auth/AuthSessionProvider";
 import { ToolHeader } from "@/components/ui/ToolHeader";
@@ -33,17 +27,13 @@ export function AccountSettings() {
     setLoading(true);
     setMessage("");
 
-    const budgets = readLocalStorage<SavedBudget[]>(savedBudgetsStorageKey, []);
-    const filmPlans = readFilmPlanStorage<SavedFilmPlan[]>(savedFilmPlansKey, []);
-    const tasks = readTasks();
-
-    const budgetResult = await replaceCloudItems("budgets", budgets, (item) => item.projectName || "Orçamento");
-    const filmResult = await replaceCloudItems("film_plans", filmPlans, (item) => item.projectName || "Plano de filmagem");
-    const taskResult = await replaceCloudItems("tasks", tasks, (item: StudioTask) => item.title || "Tarefa");
+    const result = await importMissingLocalCollections();
 
     setLoading(false);
-    if ([budgetResult, filmResult, taskResult].every((result) => result.authenticated && result.ok)) {
-      setMessage("Dados locais migrados para sua conta.");
+    if (result.authenticated && result.ok) {
+      setMessage(result.imported
+        ? `${result.imported} item(ns) local(is) importado(s) para sua conta.`
+        : "Sua conta já está sincronizada.");
     } else {
       setMessage("Não foi possível migrar tudo agora. Tente novamente em instantes.");
     }
@@ -72,7 +62,7 @@ export function AccountSettings() {
           <section className="studio-card rounded-[28px] p-5">
             <span className="grid h-12 w-12 place-items-center rounded-2xl bg-teal-50 text-teal-700"><CloudUpload size={22} /></span>
             <h2 className="mt-5 text-xl font-semibold text-zinc-950">Migrar dados locais</h2>
-            <p className="mt-2 text-sm leading-6 text-zinc-500">Leva orçamentos, planos de filmagem e tarefas deste navegador para a sua conta.</p>
+            <p className="mt-2 text-sm leading-6 text-zinc-500">Importa projetos, orçamentos, planos e tarefas deste navegador que ainda não existem na sua conta.</p>
             <button type="button" onClick={migrateLocalData} disabled={loading} className="mt-6 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-zinc-200 px-5 text-sm font-semibold text-zinc-700 disabled:opacity-60">
               <CloudUpload size={17} />{loading ? "Migrando..." : "Migrar dados locais para minha conta"}
             </button>

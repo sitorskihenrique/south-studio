@@ -47,14 +47,24 @@ export function TaskTool() {
     let mounted = true;
     setTasks(readTasks());
 
-    readCloudItems<StudioTask>("tasks").then((result) => {
+    const loadCloudTasks = (force = false) => readCloudItems<StudioTask>("tasks", { force }).then((result) => {
       if (!mounted) return;
       if (!result.authenticated) return setStorageLabel("Modo local");
       setStorageLabel(result.ok ? "Sincronizado na conta" : "Salvo neste dispositivo");
-      if (result.ok && result.items.length) setTasks(normalizeTasks(result.items));
+      if (result.ok) {
+        const cloudTasks = normalizeTasks(result.items);
+        setTasks(cloudTasks);
+        writeTasks(cloudTasks);
+      }
     });
+    void loadCloudTasks();
+    const refresh = () => void loadCloudTasks(true);
+    window.addEventListener("focus", refresh);
 
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+      window.removeEventListener("focus", refresh);
+    };
   }, []);
 
   useEffect(() => {
@@ -66,11 +76,15 @@ export function TaskTool() {
 
   function persist(next: StudioTask[], successMessage: string) {
     setTasks(next);
-    const ok = writeTasks(next);
-    setMessage(ok ? successMessage : "Não foi possível salvar as alterações neste navegador.");
+    setMessage(successMessage);
     replaceCloudItems("tasks", next, (task) => task.title || "Tarefa", { deleteMissing: true }).then((result) => {
-      if (!result.authenticated) return;
+      if (!result.authenticated) {
+        const ok = writeTasks(next);
+        if (!ok) setMessage("Não foi possível salvar as alterações neste navegador.");
+        return;
+      }
       setStorageLabel(result.ok ? "Sincronizado na conta" : "Salvo neste dispositivo");
+      writeTasks(next);
       if (!result.ok) setMessage(`${successMessage} Sincronização pendente.`);
     });
   }

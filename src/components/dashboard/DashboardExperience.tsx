@@ -20,7 +20,7 @@ import type { StudioProject } from "@/lib/projects/types";
 import { tasksStorageKey } from "@/lib/tasks/storage";
 import type { StudioTask } from "@/lib/tasks/types";
 import { useAuthSession } from "@/components/auth/AuthSessionProvider";
-import { readScopedStorage } from "@/lib/storage/scope";
+import { readScopedStorage, writeScopedStorage } from "@/lib/storage/scope";
 import { readCloudItems } from "@/lib/supabase/data";
 
 type DashboardState = {
@@ -43,14 +43,14 @@ export function DashboardExperience() {
   useEffect(() => {
     let alive = true;
 
-    async function loadDashboard() {
+    async function loadDashboard(force = false) {
       if (!ready) return;
       const localState = {
         projects: cleanProjects(readScopedStorage<StudioProject[]>(projectsStorageKey, [])),
         tasks: cleanTasks(readScopedStorage<StudioTask[]>(tasksStorageKey, [])),
         budgets: cleanBudgets(readScopedStorage<SavedBudget[]>(savedBudgetsStorageKey, [])),
       };
-      setState((current) => ({ ...current, user, ...localState, loading: true }));
+      if (!force) setState((current) => ({ ...current, user, ...localState, loading: true }));
 
       if (!user) {
         if (alive) setState((current) => ({ ...current, loading: false }));
@@ -58,26 +58,35 @@ export function DashboardExperience() {
       }
 
       const [projectsResult, tasksResult, budgetsResult] = await Promise.all([
-        readCloudItems<StudioProject>("projects"),
-        readCloudItems<StudioTask>("tasks"),
-        readCloudItems<SavedBudget>("budgets"),
+        readCloudItems<StudioProject>("projects", { force }),
+        readCloudItems<StudioTask>("tasks", { force }),
+        readCloudItems<SavedBudget>("budgets", { force }),
       ]);
 
       if (!alive) return;
 
+      const projects = resolveCloudData(projectsResult.items, projectsResult.ok, localState.projects, cleanProjects);
+      const tasks = resolveCloudData(tasksResult.items, tasksResult.ok, localState.tasks, cleanTasks);
+      const budgets = resolveCloudData(budgetsResult.items, budgetsResult.ok, localState.budgets, cleanBudgets);
+      if (projectsResult.authenticated && projectsResult.ok) writeScopedStorage(projectsStorageKey, projects);
+      if (tasksResult.authenticated && tasksResult.ok) writeScopedStorage(tasksStorageKey, tasks);
+      if (budgetsResult.authenticated && budgetsResult.ok) writeScopedStorage(savedBudgetsStorageKey, budgets);
       setState({
         user,
-        projects: resolveCloudData(projectsResult.items, projectsResult.ok, localState.projects, cleanProjects),
-        tasks: resolveCloudData(tasksResult.items, tasksResult.ok, localState.tasks, cleanTasks),
-        budgets: resolveCloudData(budgetsResult.items, budgetsResult.ok, localState.budgets, cleanBudgets),
+        projects,
+        tasks,
+        budgets,
         loading: false,
       });
     }
 
-    loadDashboard();
+    void loadDashboard();
+    const refresh = () => void loadDashboard(true);
+    window.addEventListener("focus", refresh);
 
     return () => {
       alive = false;
+      window.removeEventListener("focus", refresh);
     };
   }, [ready, user]);
 
@@ -280,8 +289,7 @@ function safeMoney(value: unknown) {
 
 function resolveCloudData<T>(items: T[], ok: boolean, local: T[], clean: (items: T[]) => T[]) {
   if (!ok) return local;
-  const cloud = clean(items);
-  return cloud.length ? cloud : local;
+  return clean(items);
 }
 
 function hasCachedData(state: DashboardState) {

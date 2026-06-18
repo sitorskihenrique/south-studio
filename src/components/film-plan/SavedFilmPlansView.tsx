@@ -45,7 +45,7 @@ export function SavedFilmPlansView({
                 </div>
                 <div className="mt-5 h-2 overflow-hidden rounded-full bg-zinc-100"><div className="h-full rounded-full bg-violet-600" style={{ width: `${progress}%` }} /></div>
                 <p className="mt-3 text-xs text-zinc-400">Atualizado em {formatDateTime(plan.updatedAt)}</p>
-                <div className="mt-5 grid grid-cols-3 gap-2"><Action icon={FolderOpen} label="Abrir" onClick={() => onOpen(plan)} primary /><Action icon={Copy} label="Duplicar" onClick={() => onDuplicate(plan)} /><Action icon={Trash2} label="Excluir" onClick={() => onDelete(plan)} danger /></div>
+                <div className="mt-5 grid gap-2 sm:grid-cols-3"><Action icon={FolderOpen} label="Abrir" onClick={() => onOpen(plan)} primary /><Action icon={Copy} label="Duplicar" onClick={() => onDuplicate(plan)} /><Action icon={Trash2} label="Excluir" onClick={() => onDelete(plan)} danger /></div>
               </article>
             );
           })}
@@ -70,4 +70,3 @@ function formatDate(value: string) {
 function formatDateTime(value: string) {
   return value ? new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(value)) : "—";
 }
-

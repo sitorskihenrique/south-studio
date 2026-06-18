@@ -54,7 +54,7 @@ async function getCurrentUser() {
   return userRequest;
 }
 
-export async function readCloudItems<T>(table: CloudTable): Promise<CloudResult<T>> {
+export async function readCloudItems<T>(table: CloudTable, options: { force?: boolean } = {}): Promise<CloudResult<T>> {
   const supabase = createClient();
   if (!supabase) return { authenticated: false, ok: false, items: [], error: "Supabase não configurado." };
 
@@ -62,7 +62,7 @@ export async function readCloudItems<T>(table: CloudTable): Promise<CloudResult<
   if (!user) return { authenticated: false, ok: false, items: [] };
 
   const cached = itemsCache.get(table);
-  if (cached && cached.userId === user.id && cached.expiresAt > Date.now()) {
+  if (!options.force && cached && cached.userId === user.id && cached.expiresAt > Date.now()) {
     return { authenticated: true, ok: true, items: cached.items as T[] };
   }
 
@@ -83,6 +83,16 @@ export async function readCloudItems<T>(table: CloudTable): Promise<CloudResult<
     });
   itemsRequests.set(table, request);
   return request as Promise<CloudResult<T>>;
+}
+
+export function invalidateCloudItems(table?: CloudTable) {
+  if (table) {
+    itemsCache.delete(table);
+    itemsRequests.delete(table);
+    return;
+  }
+  itemsCache.clear();
+  itemsRequests.clear();
 }
 
 export async function upsertCloudItem<T extends { id: string }>(table: CloudTable, item: T, title?: string) {

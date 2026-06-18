@@ -140,7 +140,7 @@ export function SavedBudgetsView({
                 </SelectInput>
               </div>
 
-              <div className="mt-5 grid grid-cols-3 gap-2">
+              <div className="mt-5 grid gap-2 sm:grid-cols-3">
                 <CardAction icon={FolderOpen} label="Abrir" onClick={() => onOpen(budget)} primary />
                 <CardAction icon={Copy} label="Duplicar" onClick={() => onDuplicate(budget)} />
                 <CardAction icon={Trash2} label="Excluir" onClick={() => onDelete(budget)} danger />
@@ -244,4 +244,3 @@ function formatDate(value: string) {
     timeStyle: "short",
   }).format(new Date(value));
 }
-

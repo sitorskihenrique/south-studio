@@ -58,8 +58,9 @@ export function BudgetCalculator() {
       ]);
       if (!mounted) return;
 
-      const saved = mergeSavedBudgets(localSaved, budgetResult?.ok ? budgetResult.items : []);
+      const saved = budgetResult?.authenticated && budgetResult.ok ? budgetResult.items : localSaved;
       setSavedBudgets(saved);
+      if (budgetResult?.authenticated && budgetResult.ok) writeLocalStorage(savedBudgetsStorageKey, saved);
       setStorageLabel(budgetResult?.authenticated ? (budgetResult.ok ? "Sincronizado na conta" : "Salvo neste dispositivo") : "Modo local");
 
       if (initialProjectId) {
@@ -69,7 +70,7 @@ export function BudgetCalculator() {
           setSaveStatus("Orçamento vinculado ao projeto");
         } else {
           const localProjects = normalizeProjects(readLocalStorage<StudioProject[]>(projectsStorageKey, []));
-          const projects = mergeProjects(localProjects, projectResult?.ok ? projectResult.items : []);
+          const projects = projectResult?.authenticated && projectResult.ok ? projectResult.items : localProjects;
           const project = projects.find((item) => item.id === initialProjectId);
           setBudget(createProjectBudget(initialProjectId, project));
           setSaveStatus("Novo orçamento vinculado ao projeto");
@@ -86,6 +87,23 @@ export function BudgetCalculator() {
     initialize();
     return () => { mounted = false; };
   }, [initialProjectId]);
+
+  useEffect(() => {
+    if (!ready) return;
+    const refresh = () => {
+      readCloudItems<SavedBudget>("budgets", { force: true }).then((result) => {
+        if (!result.authenticated || !result.ok) return;
+        setSavedBudgets(result.items);
+        writeLocalStorage(savedBudgetsStorageKey, result.items);
+        if (!dirtyRef.current) {
+          const active = result.items.find((item) => item.id === budgetRef.current.id);
+          if (active) setBudget(normalizeBudget(active.budget));
+        }
+      });
+    };
+    window.addEventListener("focus", refresh);
+    return () => window.removeEventListener("focus", refresh);
+  }, [ready]);
 
   useEffect(() => {
     if (!ready) return;
@@ -182,9 +200,9 @@ export function BudgetCalculator() {
     const next = upsertSavedBudget(savedBudgets, saved);
     setSavedBudgets(next);
     setBudget(saved.budget);
+    const cloud = await upsertCloudItem("budgets", saved, saved.projectName);
     writeLocalStorage(savedBudgetsStorageKey, next);
     writeLocalStorage(draftStorageKey, saved.budget);
-    const cloud = await upsertCloudItem("budgets", saved, saved.projectName);
     if (cloud.authenticated) setStorageLabel(cloud.ok ? "Sincronizado na conta" : "Salvo neste dispositivo");
     setDirty(false);
     setSaveStatus(cloud.authenticated && cloud.ok ? "Orçamento salvo na sua conta." : "Orçamento salvo localmente.");
@@ -203,9 +221,9 @@ export function BudgetCalculator() {
     const next = upsertSavedBudget(savedBudgets, saved);
     setSavedBudgets(next);
     setBudget(saved.budget);
+    const cloud = await upsertCloudItem("budgets", saved, saved.projectName);
     writeLocalStorage(savedBudgetsStorageKey, next);
     writeLocalStorage(draftStorageKey, saved.budget);
-    const cloud = await upsertCloudItem("budgets", saved, saved.projectName);
     if (cloud.authenticated) setStorageLabel(cloud.ok ? "Sincronizado na conta" : "Salvo neste dispositivo");
     setDirty(false);
     setSaveStatus(cloud.authenticated && cloud.ok ? "Orçamento salvo como novo na sua conta." : "Orçamento salvo como novo localmente.");
@@ -223,8 +241,8 @@ export function BudgetCalculator() {
     if (!window.confirm("Tem certeza que deseja excluir este orçamento?")) return;
     const next = savedBudgets.filter((budgetItem) => budgetItem.id !== item.id);
     setSavedBudgets(next);
-    writeLocalStorage(savedBudgetsStorageKey, next);
     const cloud = await deleteCloudItem("budgets", item.id);
+    writeLocalStorage(savedBudgetsStorageKey, next);
     if (cloud.authenticated) setStorageLabel(cloud.ok ? "Sincronizado na conta" : "Salvo neste dispositivo");
   }
 
@@ -233,8 +251,8 @@ export function BudgetCalculator() {
     const updated = createSavedBudget(updatedBudget, calculateBudget(updatedBudget));
     const next = upsertSavedBudget(savedBudgets, updated);
     setSavedBudgets(next);
-    writeLocalStorage(savedBudgetsStorageKey, next);
     const cloud = await upsertCloudItem("budgets", updated, updated.projectName);
+    writeLocalStorage(savedBudgetsStorageKey, next);
     if (cloud.authenticated) setStorageLabel(cloud.ok ? "Sincronizado na conta" : "Salvo neste dispositivo");
     if (budget.id === item.id) setBudget(updated.budget);
   }
@@ -257,7 +275,7 @@ export function BudgetCalculator() {
             </>
           ) : undefined}
         >
-          <div className="mt-7 flex w-full gap-1 rounded-2xl border border-white/10 bg-white/[0.06] p-1 sm:w-fit">
+          <div className="hide-scrollbar mt-7 flex w-full gap-1 overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.06] p-1 sm:w-fit">
             <TabButton
               active={activeTab === "create"}
               icon={PencilLine}
@@ -271,7 +289,7 @@ export function BudgetCalculator() {
               onClick={() => setActiveTab("saved")}
             />
           </div>
-          {activeTab === "create" && <div className="mt-3 flex w-full gap-1 rounded-2xl bg-white/[0.06] p-1 sm:w-fit"><ModeButton active={mode === "essential"} label="Essencial" onClick={() => setMode("essential")} /><ModeButton active={mode === "professional"} label="Profissional" premium onClick={() => setMode("professional")} /></div>}
+          {activeTab === "create" && <div className="hide-scrollbar mt-3 flex w-full gap-1 overflow-x-auto rounded-2xl bg-white/[0.06] p-1 sm:w-fit"><ModeButton active={mode === "essential"} label="Essencial" onClick={() => setMode("essential")} /><ModeButton active={mode === "professional"} label="Profissional" premium onClick={() => setMode("professional")} /></div>}
         </ToolHeader>
 
         {activeTab === "saved" ? (
@@ -515,28 +533,6 @@ function linkedProjectId(item: SavedBudget) {
   return item.projectId || item.budget?.projectId || "";
 }
 
-function mergeSavedBudgets(local: SavedBudget[], cloud: SavedBudget[]) {
-  const merged = new Map<string, SavedBudget>();
-  local.forEach((item) => {
-    if (item?.id) merged.set(item.id, item);
-  });
-  cloud.forEach((item) => {
-    if (item?.id) merged.set(item.id, item);
-  });
-  return Array.from(merged.values()).sort((a, b) => String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")));
-}
-
-function mergeProjects(local: StudioProject[], cloud: StudioProject[]) {
-  const merged = new Map<string, StudioProject>();
-  local.forEach((item) => {
-    if (item?.id) merged.set(item.id, item);
-  });
-  cloud.forEach((item) => {
-    if (item?.id) merged.set(item.id, item);
-  });
-  return Array.from(merged.values());
-}
-
 function createProjectBudget(projectId: string, project?: StudioProject) {
   const budget = createDefaultBudget(projectBudgetId(projectId));
   return {
@@ -571,9 +567,9 @@ async function persistProjectBudget(
 ) {
   const saved = createSavedBudget(budget, calculateBudget(budget));
   const next = upsertSavedBudget(currentSaved, saved);
+  const cloud = await upsertCloudItem("budgets", saved, saved.projectName);
   writeLocalStorage(savedBudgetsStorageKey, next);
   callbacks.onLocalSave(next, saved);
-  const cloud = await upsertCloudItem("budgets", saved, saved.projectName);
   callbacks.onCloudSave(cloud);
 }
 
@@ -696,7 +692,7 @@ function ActionButton({
     <button
       type="button"
       onClick={onClick}
-      className={`studio-dark-action ${primary ? "studio-dark-action--primary" : ""}`}
+      className={`studio-dark-action shrink-0 ${primary ? "studio-dark-action--primary" : ""}`}
     >
       <Icon size={17} />
       {label}
@@ -719,7 +715,7 @@ function TabButton({
     <button
       type="button"
       onClick={onClick}
-      className={`inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold transition sm:flex-none ${
+      className={`inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold transition ${
         active ? "bg-white text-[#0b0e15]" : "text-white/48 hover:bg-white/[0.06] hover:text-white"
       }`}
     >

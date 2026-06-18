@@ -5,6 +5,7 @@ import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { setActiveStorageUser } from "@/lib/storage/scope";
 import { setCloudAuthUser } from "@/lib/supabase/data";
+import { migrateLocalCollectionsOnce } from "@/lib/supabase/migrate-local";
 
 type AuthSessionValue = {
   user: User | null;
@@ -27,11 +28,13 @@ export function AuthSessionProvider({ children }: { children: React.ReactNode })
     }
 
     let active = true;
-    supabase.auth.getUser().then(({ data }) => {
+    supabase.auth.getUser().then(async ({ data }) => {
       if (!active) return;
       setUser(data.user);
       setActiveStorageUser(data.user?.id || null);
       setCloudAuthUser(data.user);
+      if (data.user) await migrateLocalCollectionsOnce(data.user.id);
+      if (!active) return;
       setReady(true);
     });
 
@@ -39,6 +42,7 @@ export function AuthSessionProvider({ children }: { children: React.ReactNode })
       setUser(session?.user ?? null);
       setActiveStorageUser(session?.user?.id || null);
       setCloudAuthUser(session?.user ?? null);
+      if (session?.user) void migrateLocalCollectionsOnce(session.user.id);
       setReady(true);
     });
 

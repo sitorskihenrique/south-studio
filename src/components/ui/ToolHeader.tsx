@@ -23,7 +23,7 @@ export function ToolHeader({
             <h1 className="mt-4 text-4xl font-semibold leading-[1.02] text-white sm:text-6xl">{title}</h1>
             <p className="mt-4 max-w-2xl text-sm leading-6 text-white/70 sm:text-base">{description}</p>
           </div>
-          {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
+          {actions && <div className="hide-scrollbar flex w-full gap-2 overflow-x-auto pb-1 xl:w-auto xl:flex-wrap xl:justify-end">{actions}</div>}
         </div>
         {children}
       </div>

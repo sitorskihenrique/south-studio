@@ -35,9 +35,10 @@ export function FilmPlanTool() {
   useEffect(() => {
     let mounted = true;
     const draft = readFilmPlanStorage<Partial<FilmPlan> | null>(filmPlanDraftKey, null);
-    if (draft) setPlan(normalizePlan({ ...draft, projectId: initialProjectId || draft.projectId }));
+    const localSaved = readFilmPlanStorage<SavedFilmPlan[]>(savedFilmPlansKey, []);
+    if (!initialProjectId && draft) setPlan(normalizePlan(draft));
     else if (initialProjectId) setPlan((current) => ({ ...current, projectId: initialProjectId }));
-    setSavedPlans(readFilmPlanStorage<SavedFilmPlan[]>(savedFilmPlansKey, []));
+    setSavedPlans(localSaved);
     setReady(true);
     readCloudItems<SavedFilmPlan>("film_plans").then((result) => {
       if (!mounted) return;
@@ -46,10 +47,34 @@ export function FilmPlanTool() {
         return;
       }
       setStorageLabel(result.ok ? "Sincronizado na conta" : "Salvo neste dispositivo");
-      if (result.ok && result.items.length) setSavedPlans(result.items);
+      if (result.ok) {
+        setSavedPlans(result.items);
+        writeFilmPlanStorage(savedFilmPlansKey, result.items);
+        const linked = initialProjectId
+          ? result.items.find((item) => (item.projectId || item.plan?.projectId) === initialProjectId)
+          : null;
+        if (linked) setPlan(normalizePlan(linked.plan));
+      }
     });
     return () => { mounted = false; };
   }, [initialProjectId]);
+
+  useEffect(() => {
+    if (!ready) return;
+    const refresh = () => {
+      readCloudItems<SavedFilmPlan>("film_plans", { force: true }).then((result) => {
+        if (!result.authenticated || !result.ok) return;
+        setSavedPlans(result.items);
+        writeFilmPlanStorage(savedFilmPlansKey, result.items);
+        if (!dirty) {
+          const active = result.items.find((item) => item.id === plan.id);
+          if (active) setPlan(normalizePlan(active.plan));
+        }
+      });
+    };
+    window.addEventListener("focus", refresh);
+    return () => window.removeEventListener("focus", refresh);
+  }, [dirty, plan.id, ready]);
 
   useEffect(() => {
     if (!ready) return;
@@ -81,15 +106,15 @@ export function FilmPlanTool() {
   async function savePlan() {
     const saved = toSavedFilmPlan(plan);
     const next = upsertFilmPlan(savedPlans, saved);
-    const ok = writeFilmPlanStorage(savedFilmPlansKey, next);
-    if (!ok) {
-      setMessage("Não foi possível salvar. O armazenamento local pode estar cheio.");
-      return;
-    }
     setSavedPlans(next);
     setPlan(saved.plan);
-    writeFilmPlanStorage(filmPlanDraftKey, saved.plan);
     const cloud = await upsertCloudItem("film_plans", saved, saved.projectName);
+    const ok = writeFilmPlanStorage(savedFilmPlansKey, next);
+    writeFilmPlanStorage(filmPlanDraftKey, saved.plan);
+    if (!ok && !cloud.ok) {
+      setMessage("Não foi possível salvar. Tente novamente.");
+      return;
+    }
     if (cloud.authenticated) setStorageLabel(cloud.ok ? "Sincronizado na conta" : "Salvo neste dispositivo");
     setDirty(false);
     setMessage(cloud.authenticated && cloud.ok ? "Plano salvo na sua conta." : "Plano salvo localmente.");
@@ -99,10 +124,10 @@ export function FilmPlanTool() {
     const copy = normalizePlan({ ...source, id: crypto.randomUUID(), projectName: `Cópia de ${source.projectName}`, createdAt: "", updatedAt: "" });
     const saved = toSavedFilmPlan(copy);
     const next = upsertFilmPlan(savedPlans, saved);
-    if (!writeFilmPlanStorage(savedFilmPlansKey, next)) return setMessage("Não foi possível duplicar. O armazenamento local pode estar cheio.");
     setSavedPlans(next);
     setPlan(saved.plan);
     const cloud = await upsertCloudItem("film_plans", saved, saved.projectName);
+    writeFilmPlanStorage(savedFilmPlansKey, next);
     if (cloud.authenticated) setStorageLabel(cloud.ok ? "Sincronizado na conta" : "Salvo neste dispositivo");
     setDirty(false);
     setMessage(cloud.authenticated && cloud.ok ? "Plano duplicado na sua conta." : "Plano duplicado localmente.");
@@ -120,8 +145,8 @@ export function FilmPlanTool() {
     if (!window.confirm("Tem certeza que deseja excluir este plano de filmagem?")) return;
     const next = savedPlans.filter((item) => item.id !== saved.id);
     setSavedPlans(next);
-    writeFilmPlanStorage(savedFilmPlansKey, next);
     const cloud = await deleteCloudItem("film_plans", saved.id);
+    writeFilmPlanStorage(savedFilmPlansKey, next);
     if (cloud.authenticated) setStorageLabel(cloud.ok ? "Sincronizado na conta" : "Salvo neste dispositivo");
   }
 
@@ -135,7 +160,7 @@ export function FilmPlanTool() {
           actions={view !== "saved" ? <><Action icon={CalendarPlus} label="Novo plano" onClick={newPlan} /><Action icon={Save} label="Salvar plano" onClick={savePlan} primary /><Action icon={Copy} label="Duplicar" onClick={() => duplicate()} /></> : undefined}
         >
           <div className="mt-7 flex w-full gap-1 overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.06] p-1 sm:w-fit"><Tab icon={Film} label="Editor" active={view === "editor"} onClick={() => setView("editor")} /><Tab icon={LayoutList} label="Timeline" active={view === "timeline"} onClick={() => setView("timeline")} /><Tab icon={LayoutList} label={`Planos (${savedPlans.length})`} active={view === "saved"} onClick={() => setView("saved")} /></div>
-          {view === "editor" && <div className="mt-3 flex w-full gap-1 rounded-2xl bg-white/[0.06] p-1 sm:w-fit"><Mode active={mode === "simple"} label="Plano simples" onClick={() => setMode("simple")} /><Mode active={mode === "complete"} label="Plano completo" premium onClick={() => setMode("complete")} /></div>}
+          {view === "editor" && <div className="hide-scrollbar mt-3 flex w-full gap-1 overflow-x-auto rounded-2xl bg-white/[0.06] p-1 sm:w-fit"><Mode active={mode === "simple"} label="Plano simples" onClick={() => setMode("simple")} /><Mode active={mode === "complete"} label="Plano completo" premium onClick={() => setMode("complete")} /></div>}
         </ToolHeader>
 
         {view === "saved" ? <div className="mt-6"><SavedFilmPlansView plans={savedPlans} onOpen={openSaved} onDuplicate={(saved) => duplicate(saved.plan)} onDelete={deleteSaved} /></div> : (
@@ -221,7 +246,7 @@ function normalizePlan(stored: Partial<FilmPlan>): FilmPlan {
 }
 
 function Action({ icon: Icon, label, onClick, primary }: { icon: typeof Save; label: string; onClick: () => void; primary?: boolean }) {
-  return <button type="button" onClick={onClick} className={`studio-dark-action ${primary ? "studio-dark-action--primary" : ""}`}><Icon size={17} />{label}</button>;
+  return <button type="button" onClick={onClick} className={`studio-dark-action shrink-0 ${primary ? "studio-dark-action--primary" : ""}`}><Icon size={17} />{label}</button>;
 }
 function Tab({ icon: Icon, label, active, onClick }: { icon: typeof Film; label: string; active: boolean; onClick: () => void }) {
   return <button type="button" onClick={onClick} className={`inline-flex min-h-11 min-w-fit items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold transition ${active ? "bg-white text-[#0b0e15]" : "text-white/48 hover:bg-white/[0.06] hover:text-white"}`}><Icon size={17} />{label}</button>;

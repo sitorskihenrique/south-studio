@@ -8,7 +8,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { ready } = useAuthSession();
 
   return (
-    <div className="studio-app min-h-[100dvh] overflow-x-hidden bg-[#eceef2] text-zinc-950">
+    <div className="studio-app min-h-[100dvh] overflow-x-hidden bg-[#eceef2] pb-[calc(5.5rem+env(safe-area-inset-bottom))] text-zinc-950 lg:pb-0">
       <div className="mx-auto grid min-h-[100dvh] w-full max-w-[1720px] items-start gap-3 px-3 py-3 sm:gap-4 sm:px-5 sm:py-5 lg:grid-cols-[264px_minmax(0,1fr)] lg:gap-5 lg:px-6 lg:py-6">
         <Suspense fallback={<SidebarLoading />}>
           <StudioSidebar />

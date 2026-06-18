@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { FolderPlus } from "lucide-react";
 import { Field, SelectInput } from "@/components/budget/BudgetFields";
-import { normalizeProjects, readProjects } from "@/lib/projects/storage";
+import { normalizeProjects, readProjects, writeProjects } from "@/lib/projects/storage";
 import type { StudioProject } from "@/lib/projects/types";
 import { readCloudItems } from "@/lib/supabase/data";
 
@@ -15,7 +15,11 @@ export function ProjectLinkField({ value, onChange }: { value: string; onChange:
     let mounted = true;
     setProjects(readProjects());
     readCloudItems<StudioProject>("projects").then((result) => {
-      if (mounted && result.authenticated && result.ok && result.items.length) setProjects(normalizeProjects(result.items));
+      if (mounted && result.authenticated && result.ok) {
+        const cloudProjects = normalizeProjects(result.items);
+        setProjects(cloudProjects);
+        writeProjects(cloudProjects);
+      }
     });
     return () => { mounted = false; };
   }, []);
