@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, Cloud, CloudUpload, Clock3, LogOut, RefreshCw, ShieldCheck, UserRound } from "lucide-react";
+import { BarChart3, CheckCircle2, Cloud, CloudUpload, Clock3, LogOut, RefreshCw, ShieldCheck, UserRound } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { importMissingLocalCollections } from "@/lib/supabase/migrate-local";
@@ -11,6 +11,11 @@ import { useAuthSession } from "@/components/auth/AuthSessionProvider";
 import { ToolHeader } from "@/components/ui/ToolHeader";
 import { cloudSyncEvent, getCloudSyncSnapshot, readCloudItems } from "@/lib/supabase/data";
 import type { StudioTask } from "@/lib/tasks/types";
+import {
+  isUsageAnalyticsEnabled,
+  setUsageAnalyticsEnabled,
+  usageAnalyticsPreferenceEvent,
+} from "@/lib/analytics/usage";
 
 export function AccountSettings() {
   const router = useRouter();
@@ -20,6 +25,14 @@ export function AccountSettings() {
   const [checkingSync, setCheckingSync] = useState(false);
   const [cloudOnline, setCloudOnline] = useState<boolean | null>(null);
   const [syncState, setSyncState] = useState({ pending: 0, lastSyncedAt: "" });
+  const [analyticsEnabled, setAnalyticsEnabled] = useState(false);
+
+  useEffect(() => {
+    const refreshPreference = () => setAnalyticsEnabled(isUsageAnalyticsEnabled());
+    refreshPreference();
+    window.addEventListener(usageAnalyticsPreferenceEvent, refreshPreference);
+    return () => window.removeEventListener(usageAnalyticsPreferenceEvent, refreshPreference);
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -78,6 +91,12 @@ export function AccountSettings() {
     setCheckingSync(false);
   }
 
+  function toggleAnalytics() {
+    const next = !analyticsEnabled;
+    setUsageAnalyticsEnabled(next);
+    setAnalyticsEnabled(next);
+  }
+
   return (
     <section className="h-full overflow-y-auto">
       <div className="mx-auto max-w-5xl px-4 py-6 sm:px-8 lg:py-9">
@@ -118,6 +137,28 @@ export function AccountSettings() {
             </div>
           </div>
         </div>
+
+        <section className="studio-card mt-4 rounded-[28px] p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex min-w-0 items-start gap-3">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-violet-50 text-violet-700"><BarChart3 size={19} /></span>
+              <div>
+                <h2 className="text-base font-semibold text-zinc-950">Ajudar a melhorar o South Studio enviando métricas anônimas de uso</h2>
+                <p className="mt-2 text-sm leading-6 text-zinc-500">Envia somente ferramenta utilizada, tipo de ação, dispositivo geral e horário. Nunca envia nomes, textos, valores, imagens, e-mail ou conteúdo dos seus projetos.</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={analyticsEnabled}
+              onClick={toggleAnalytics}
+              className={`relative h-8 w-14 shrink-0 rounded-full transition ${analyticsEnabled ? "bg-emerald-500" : "bg-zinc-300"}`}
+            >
+              <span className={`absolute top-1 h-6 w-6 rounded-full bg-white shadow-sm transition ${analyticsEnabled ? "left-7" : "left-1"}`} />
+              <span className="sr-only">{analyticsEnabled ? "Desativar métricas anônimas" : "Ativar métricas anônimas"}</span>
+            </button>
+          </div>
+        </section>
 
         <section className="studio-card mt-4 rounded-[28px] p-5">
           <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">

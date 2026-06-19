@@ -25,6 +25,7 @@ import { TaskSummary } from "./TaskSummary";
 import { TaskWeekView } from "./TaskWeekView";
 import { ToolHeader } from "@/components/ui/ToolHeader";
 import { useAuthSession } from "@/components/auth/AuthSessionProvider";
+import { trackUsageEvent } from "@/lib/analytics/usage";
 
 const dayTabs: TaskDayFilter[] = ["Visão da Semana", "Hoje", ...taskDays, "Calendário", "Concluídas"];
 
@@ -157,6 +158,7 @@ export function TaskTool() {
     } else {
       const created = { ...draft, title, id: crypto.randomUUID(), createdAt: new Date().toISOString() };
       persistUpsert(created, [created, ...tasks], "Tarefa criada.");
+      void trackUsageEvent("task_created", "tasks");
     }
     setSheetOpen(false);
   }

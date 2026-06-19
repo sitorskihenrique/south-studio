@@ -16,6 +16,7 @@ import type { SavedBudget } from "@/lib/budget/types";
 import { readFilmPlanStorage, savedFilmPlansKey, writeFilmPlanStorage } from "@/lib/film-plan/storage";
 import type { SavedFilmPlan } from "@/lib/film-plan/types";
 import { ToolHeader } from "@/components/ui/ToolHeader";
+import { trackUsageEvent } from "@/lib/analytics/usage";
 
 const statuses: Array<"Todos" | ProjectStatus> = ["Todos", ...projectStatuses];
 
@@ -164,7 +165,10 @@ export function ProjectsBoard() {
       related: previous?.related || { taskIds: [], budgetIds: [], filmPlanIds: [] },
     };
     const saved = await persist(project, previous ? "Projeto atualizado." : "Projeto criado.");
-    if (saved) setFormOpen(false);
+    if (saved) {
+      if (!previous) void trackUsageEvent("project_created", "projects");
+      setFormOpen(false);
+    }
   }
 
   function openProject(project: StudioProject, tab: ProjectDetailTab = "Visão geral") {

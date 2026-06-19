@@ -16,6 +16,7 @@ import { TimelineView } from "./TimelineView";
 import { ProjectLinkField } from "@/components/projects/ProjectLinkField";
 import { ToolHeader } from "@/components/ui/ToolHeader";
 import { PremiumPreviewDialog } from "@/components/PremiumPreviewDialog";
+import { trackUsageEvent } from "@/lib/analytics/usage";
 
 type View = "editor" | "timeline" | "saved";
 
@@ -120,6 +121,7 @@ export function FilmPlanTool() {
     if (cloud.authenticated) setStorageLabel(cloud.ok ? "Sincronizado na conta" : "Salvo neste dispositivo");
     setDirty(false);
     setMessage(cloud.authenticated && cloud.ok ? "Plano salvo na sua conta." : "Plano salvo localmente.");
+    if (cloud.authenticated && (cloud.ok || cloud.queued)) void trackUsageEvent("film_plan_saved", "film_plans");
   }
 
   async function duplicate(source = plan) {
