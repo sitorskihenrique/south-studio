@@ -33,6 +33,21 @@ export type CloudWriteResult = {
   error?: string;
 };
 
+export const cloudSyncEvent = "south-studio-cloud-sync";
+
+export type CloudSyncSnapshot = {
+  pending: number;
+  lastSyncedAt: string;
+};
+
+export function getCloudSyncSnapshot(userId: string): CloudSyncSnapshot {
+  if (typeof window === "undefined" || !userId) return { pending: 0, lastSyncedAt: "" };
+  return {
+    pending: readCloudOutbox(userId).length,
+    lastSyncedAt: window.localStorage.getItem(lastSyncKey(userId)) || "",
+  };
+}
+
 function projectIdFor(item: unknown) {
   if (!item || typeof item !== "object" || !("projectId" in item)) return null;
   const projectId = (item as { projectId?: unknown }).projectId;
@@ -117,6 +132,7 @@ export async function readCloudItems<T extends { id: string }>(
     const cloudItems = ((data || []) as CloudRow<{ id: string }>[]).map((row) => row.data);
     const items = applyCloudOutbox(user.id, table, cloudItems);
     itemsCache.set(table, { userId: user.id, items, expiresAt: Date.now() + 15_000 });
+    recordCloudSync(user.id);
     return { authenticated: true, ok: true, items };
   }).catch((error: unknown) => {
     itemsRequests.delete(table);
@@ -153,6 +169,7 @@ export async function upsertCloudItem<T extends { id: string }>(
   if (!user) return { authenticated: false, ok: false, error: "Usuario nao autenticado." };
 
   const queued = enqueueCloudOperation(user.id, { table, type: "upsert", id: item.id, item, title });
+  notifyCloudSync(user.id);
   if (!queued) {
     return {
       authenticated: true,
@@ -195,6 +212,7 @@ export async function replaceCloudItems<T extends { id: string }>(
     item,
     title: titleForItem(item),
   }));
+  notifyCloudSync(user.id);
   const queued = queuedResults.every(Boolean);
   if (!queued) {
     return { authenticated: true, ok: false, queued: false, error: "Nao foi possivel preservar todos os itens para envio." };
@@ -218,6 +236,7 @@ export async function deleteCloudItem(table: CloudTable, id: string): Promise<Cl
   if (!user) return { authenticated: false, ok: false, error: "Usuario nao autenticado." };
 
   const queued = enqueueCloudOperation(user.id, { table, type: "delete", id });
+  notifyCloudSync(user.id);
   if (!queued) {
     return {
       authenticated: true,
@@ -266,13 +285,6 @@ async function runCloudOutbox(userId: string, table?: CloudTable) {
           )
         : await sendUpsertOperation(supabase, userId, operation);
       if (!result || result.error) {
-        console.warn("[cloud-sync]", {
-          userId,
-          table: operation.table,
-          operation: operation.type,
-          itemId: operation.id,
-          error: result?.error?.message || "timeout",
-        });
         return null;
       }
       return operation;
@@ -283,7 +295,10 @@ async function runCloudOutbox(userId: string, table?: CloudTable) {
   const completedOperations = results.filter((operation) => operation !== null);
   completedOperations.forEach((operation) => itemsCache.delete(operation.table));
   acknowledgeCloudOperations(userId, completedOperations);
-  return !readCloudOutbox(userId).some((operation) => !table || operation.table === table);
+  const complete = !readCloudOutbox(userId).some((operation) => !table || operation.table === table);
+  if (complete) recordCloudSync(userId);
+  else notifyCloudSync(userId);
+  return complete;
 }
 
 async function sendUpsertOperation(
@@ -308,12 +323,6 @@ async function sendUpsertOperation(
     return first;
   }
 
-  console.info("[cloud-sync]", {
-    userId,
-    table: operation.table,
-    operation: "schema-fallback",
-    detail: "project_id indisponivel; salvando no formato compativel",
-  });
   return withTimeout(
     Promise.resolve(supabase.from(operation.table).upsert(baseRow, { onConflict: "id,user_id" })),
     8_000,
@@ -324,6 +333,21 @@ function isMissingProjectIdError(message: string) {
   const normalized = message.toLocaleLowerCase();
   return normalized.includes("project_id") &&
     (normalized.includes("column") || normalized.includes("schema cache") || normalized.includes("could not find"));
+}
+
+function lastSyncKey(userId: string) {
+  return `south-studio-cloud-last-sync-v1:user:${userId}`;
+}
+
+function recordCloudSync(userId: string) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(lastSyncKey(userId), new Date().toISOString());
+  notifyCloudSync(userId);
+}
+
+function notifyCloudSync(userId: string) {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent(cloudSyncEvent, { detail: getCloudSyncSnapshot(userId) }));
 }
 
 async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T | null> {

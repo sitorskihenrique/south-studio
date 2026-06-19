@@ -1,19 +1,50 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CloudUpload, LogOut, ShieldCheck, UserRound } from "lucide-react";
+import { CheckCircle2, Cloud, CloudUpload, Clock3, LogOut, RefreshCw, ShieldCheck, UserRound } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { importMissingLocalCollections } from "@/lib/supabase/migrate-local";
 import { InstallApp } from "@/components/pwa/InstallApp";
 import { useAuthSession } from "@/components/auth/AuthSessionProvider";
 import { ToolHeader } from "@/components/ui/ToolHeader";
+import { cloudSyncEvent, getCloudSyncSnapshot, readCloudItems } from "@/lib/supabase/data";
+import type { StudioTask } from "@/lib/tasks/types";
 
 export function AccountSettings() {
   const router = useRouter();
   const { user } = useAuthSession();
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [checkingSync, setCheckingSync] = useState(false);
+  const [cloudOnline, setCloudOnline] = useState<boolean | null>(null);
+  const [syncState, setSyncState] = useState({ pending: 0, lastSyncedAt: "" });
+
+  useEffect(() => {
+    if (!user) return;
+    const refreshSnapshot = () => setSyncState(getCloudSyncSnapshot(user.id));
+    refreshSnapshot();
+    window.addEventListener(cloudSyncEvent, refreshSnapshot);
+    window.addEventListener("online", refreshSnapshot);
+    return () => {
+      window.removeEventListener(cloudSyncEvent, refreshSnapshot);
+      window.removeEventListener("online", refreshSnapshot);
+    };
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    let active = true;
+    setCheckingSync(true);
+    readCloudItems<StudioTask>("tasks", { force: true }).then((result) => {
+      if (!active) return;
+      setCloudOnline(result.authenticated && result.ok);
+      setSyncState(getCloudSyncSnapshot(user.id));
+      setCheckingSync(false);
+    });
+    return () => { active = false; };
+  }, [user]);
 
   async function signOut() {
     const supabase = createClient();
@@ -37,6 +68,14 @@ export function AccountSettings() {
     } else {
       setMessage("Não foi possível migrar tudo agora. Tente novamente em instantes.");
     }
+  }
+
+  async function checkCloud() {
+    setCheckingSync(true);
+    const result = await readCloudItems<StudioTask>("tasks", { force: true });
+    setCloudOnline(result.authenticated && result.ok);
+    if (user) setSyncState(getCloudSyncSnapshot(user.id));
+    setCheckingSync(false);
   }
 
   return (
@@ -79,8 +118,49 @@ export function AccountSettings() {
             </div>
           </div>
         </div>
+
+        <section className="studio-card mt-4 rounded-[28px] p-5">
+          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
+            <div>
+              <p className="text-xs font-semibold uppercase text-zinc-400">Status beta</p>
+              <h2 className="mt-2 text-xl font-semibold text-zinc-950">Sincronização da conta</h2>
+              <p className="mt-2 text-sm leading-6 text-zinc-500">A nuvem é a fonte principal. Alterações sem conexão ficam na fila deste dispositivo até o próximo envio.</p>
+            </div>
+            <button type="button" onClick={checkCloud} disabled={checkingSync} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-zinc-200 px-4 text-sm font-semibold text-zinc-700 disabled:opacity-60">
+              <RefreshCw size={16} className={checkingSync ? "animate-spin" : ""} />Verificar
+            </button>
+          </div>
+          <div className="mt-5 grid gap-3 sm:grid-cols-3">
+            <StatusItem icon={Cloud} label="Supabase" value={cloudOnline === null ? "Verificando" : cloudOnline ? "Conectado" : "Indisponível"} positive={cloudOnline === true} />
+            <StatusItem icon={Clock3} label="Última sync" value={formatSyncDate(syncState.lastSyncedAt)} positive={Boolean(syncState.lastSyncedAt)} />
+            <StatusItem icon={CheckCircle2} label="Fila pendente" value={syncState.pending ? `${syncState.pending} item(ns)` : "Tudo enviado"} positive={!syncState.pending} />
+          </div>
+          <p className="mt-4 text-xs text-zinc-400">Versão beta · usuário {user?.email || "não identificado"}</p>
+        </section>
         <InstallApp />
       </div>
     </section>
   );
+}
+
+function StatusItem({ icon: Icon, label, value, positive }: { icon: LucideIcon; label: string; value: string; positive: boolean }) {
+  return (
+    <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
+      <Icon size={18} className={positive ? "text-emerald-600" : "text-zinc-400"} />
+      <p className="mt-3 text-xs font-semibold uppercase text-zinc-400">{label}</p>
+      <p className="mt-1 text-sm font-semibold text-zinc-800">{value}</p>
+    </div>
+  );
+}
+
+function formatSyncDate(value: string) {
+  if (!value) return "Ainda não registrada";
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return "Ainda não registrada";
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
 }

@@ -1,8 +1,18 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { LocalizedBrandCopy } from "@/components/LocalizedBrandCopy";
 import { BrandLogo } from "@/components/ui/BrandLogo";
+import { createServerSupabase } from "@/lib/supabase/server";
 
-export default function LandingPage() {
+export const dynamic = "force-dynamic";
+
+export default async function LandingPage() {
+  const supabase = await createServerSupabase();
+  if (supabase) {
+    const result = await withTimeout(supabase.auth.getUser(), 6_000);
+    if (result?.data.user) redirect("/dashboard");
+  }
+
   return (
     <main className="studio-auth-backdrop min-h-[100dvh] bg-black p-3 text-white sm:p-5">
       <section className="studio-auth-surface mx-auto flex min-h-[calc(100dvh-1.5rem)] max-w-[1720px] flex-col overflow-hidden rounded-[26px] border border-white/10 px-5 py-5 shadow-[0_32px_110px_rgba(0,0,0,0.5)] sm:min-h-[calc(100dvh-2.5rem)] sm:rounded-[32px] sm:px-9 sm:py-8 lg:px-14 lg:py-10">
@@ -27,4 +37,18 @@ export default function LandingPage() {
       </section>
     </main>
   );
+}
+
+async function withTimeout<T>(promise: PromiseLike<T>, timeoutMs: number): Promise<T | null> {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      Promise.resolve(promise),
+      new Promise<null>((resolve) => {
+        timeout = setTimeout(() => resolve(null), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeout) clearTimeout(timeout);
+  }
 }

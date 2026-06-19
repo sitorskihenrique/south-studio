@@ -60,6 +60,8 @@ export async function updateSession(request: NextRequest) {
     return response;
   }
 
+  if (!isProtected && !isAuth) return response;
+
   const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
       getAll() {
@@ -74,6 +76,9 @@ export async function updateSession(request: NextRequest) {
   });
 
   const userResult = await withTimeout(supabase.auth.getUser(), AUTH_TIMEOUT_MS);
+  if (!userResult) {
+    return response;
+  }
   const user = userResult?.data?.user ?? null;
 
   if (isProtected && !user) {

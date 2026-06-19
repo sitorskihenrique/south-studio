@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { CheckCheck, ListFilter, Plus, Search, Tags } from "lucide-react";
 import { emptyTaskDraft, defaultTasks } from "@/lib/tasks/defaults";
 import { filterTasks, getTodayTaskDay, taskSummary } from "@/lib/tasks/filters";
-import { normalizeTasks, readTasks, writeTasks } from "@/lib/tasks/storage";
+import { normalizeTasks, writeTasks } from "@/lib/tasks/storage";
 import {
   taskCategories,
   taskDays,
@@ -25,7 +25,6 @@ import { TaskSummary } from "./TaskSummary";
 import { TaskWeekView } from "./TaskWeekView";
 import { ToolHeader } from "@/components/ui/ToolHeader";
 import { useAuthSession } from "@/components/auth/AuthSessionProvider";
-import { migrateLocalTasksOnce } from "@/lib/supabase/migrate-local";
 
 const dayTabs: TaskDayFilter[] = ["Visão da Semana", "Hoje", ...taskDays, "Calendário", "Concluídas"];
 
@@ -51,18 +50,8 @@ export function TaskTool() {
     if (!user) return () => { mounted = false; };
 
     const loadCloudTasks = async (force = false) => {
-      const localCount = readTasks().length;
-      const migration = await migrateLocalTasksOnce(user.id);
-      const result = await readCloudItems<StudioTask>("tasks", { force: force || migration.imported > 0 });
+      const result = await readCloudItems<StudioTask>("tasks", { force });
       if (!mounted) return;
-      console.info("[task-sync]", {
-        userId: user.id,
-        cloudCount: result.items.length,
-        localCount,
-        source: result.ok ? "supabase" : result.items.length ? "outbox-pendente" : "erro-supabase",
-        migrationImported: migration.imported,
-        error: result.error || migration.error || null,
-      });
       if (!result.authenticated) {
         setStorageLabel("Conta indisponível");
         setMessage("Não foi possível validar sua conta. Entre novamente.");
@@ -86,11 +75,18 @@ export function TaskTool() {
     };
     void loadCloudTasks();
     const refresh = () => void loadCloudTasks(true);
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
     window.addEventListener("focus", refresh);
+    window.addEventListener("online", refresh);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
 
     return () => {
       mounted = false;
       window.removeEventListener("focus", refresh);
+      window.removeEventListener("online", refresh);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
     };
   }, [user]);
 
@@ -106,14 +102,6 @@ export function TaskTool() {
     setMessage(successMessage);
     writeTasks(next);
     upsertCloudItem("tasks", task, task.title || "Tarefa").then((result) => {
-      console.info("[task-sync]", {
-        userId: user?.id || null,
-        operation: "upsert",
-        taskId: task.id,
-        ok: result.ok,
-        queued: result.queued || false,
-        error: result.error || null,
-      });
       if (!result.authenticated) {
         setStorageLabel("Salvo neste dispositivo");
         return;
@@ -130,14 +118,6 @@ export function TaskTool() {
     setMessage(successMessage);
     writeTasks(next);
     deleteCloudItem("tasks", taskId).then((result) => {
-      console.info("[task-sync]", {
-        userId: user?.id || null,
-        operation: "delete",
-        taskId,
-        ok: result.ok,
-        queued: result.queued || false,
-        error: result.error || null,
-      });
       if (!result.authenticated) {
         setStorageLabel("Salvo neste dispositivo");
         return;

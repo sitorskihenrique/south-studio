@@ -10,6 +10,7 @@ import { LocalizedBrandCopy } from "@/components/LocalizedBrandCopy";
 import { BrandLogo } from "@/components/ui/BrandLogo";
 
 type AuthMode = "login" | "cadastro";
+const AUTH_REQUEST_TIMEOUT_MS = 12_000;
 
 export function AuthForm({ mode, nextPath = "/dashboard", missingConfig }: { mode: AuthMode; nextPath?: string; missingConfig?: boolean }) {
   const router = useRouter();
@@ -38,8 +39,13 @@ export function AuthForm({ mode, nextPath = "/dashboard", missingConfig }: { mod
 
     setLoading(true);
     if (isLogin) {
-      const { data, error: authError } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+      const result = await withTimeout(
+        supabase.auth.signInWithPassword({ email: email.trim(), password }),
+        AUTH_REQUEST_TIMEOUT_MS,
+      );
       setLoading(false);
+      if (!result) return setError("A conexão demorou mais que o esperado. Tente novamente.");
+      const { data, error: authError } = result;
       if (authError) return setError("E-mail ou senha inválidos.");
       setActiveStorageUser(data.user.id);
       router.push(nextPath);
@@ -48,12 +54,17 @@ export function AuthForm({ mode, nextPath = "/dashboard", missingConfig }: { mod
     }
 
     const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`;
-    const { data, error: authError } = await supabase.auth.signUp({
-      email: email.trim(),
-      password,
-      options: { emailRedirectTo: redirectTo, data: { full_name: name.trim() } },
-    });
+    const result = await withTimeout(
+      supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: { emailRedirectTo: redirectTo, data: { full_name: name.trim() } },
+      }),
+      AUTH_REQUEST_TIMEOUT_MS,
+    );
     setLoading(false);
+    if (!result) return setError("A conexão demorou mais que o esperado. Tente novamente.");
+    const { data, error: authError } = result;
     if (authError) return setError(authError.message);
     if (data.session) {
       setActiveStorageUser(data.user?.id || null);
@@ -73,11 +84,16 @@ export function AuthForm({ mode, nextPath = "/dashboard", missingConfig }: { mod
     if (!supabase) return setError("Não foi possível iniciar o acesso.");
 
     setLoading(true);
-    const { error: authError } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}` },
-    });
+    const result = await withTimeout(
+      supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}` },
+      }),
+      AUTH_REQUEST_TIMEOUT_MS,
+    );
     setLoading(false);
+    if (!result) return setError("A conexão demorou mais que o esperado. Tente novamente.");
+    const { error: authError } = result;
     if (authError) setError("Não foi possível iniciar o login com Google.");
   }
 
@@ -149,4 +165,18 @@ function AuthField({ label, type = "text", value, onChange, autoComplete, placeh
 
 function validateEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
+async function withTimeout<T>(promise: PromiseLike<T>, timeoutMs: number): Promise<T | null> {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      Promise.resolve(promise),
+      new Promise<null>((resolve) => {
+        timeout = setTimeout(() => resolve(null), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeout) clearTimeout(timeout);
+  }
 }

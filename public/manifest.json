@@ -2,7 +2,7 @@
   "name": "Cologne OS",
   "short_name": "Cologne",
   "description": "Workspace para produção audiovisual",
-  "start_url": "/",
+  "start_url": "/app",
   "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",
