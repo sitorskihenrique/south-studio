@@ -56,6 +56,26 @@ export type BudgetSettings = {
   installmentRatePercent: number;
 };
 
+export type EssentialFuelData = {
+  distanceKm: number;
+  kmPerLiter: number;
+  fuelPrice: number;
+};
+
+export type PremiumFuelData = {
+  outboundKm: number;
+  returnKm: number;
+  extraKm: number;
+  kmPerLiter: number;
+  fuelPrice: number;
+  toll: number;
+  parking: number;
+  foodAndTravel: number;
+  carCount: number;
+  peopleCount: number;
+  notes: string;
+};
+
 export type SimpleBudgetData = {
   chargeType: "Por diária" | "Por hora" | "Misto";
   preProductionHours: number;
@@ -74,6 +94,8 @@ export type SimpleBudgetData = {
   travel: number;
   food: number;
   otherCosts: number;
+  fuelEssential: EssentialFuelData;
+  fuelPremium: PremiumFuelData;
 };
 
 export type BudgetState = {

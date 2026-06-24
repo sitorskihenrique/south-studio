@@ -14,7 +14,16 @@ import {
   writeLocalStorage,
 } from "@/lib/budget/storage";
 import { deleteCloudItem, readCloudItems, upsertCloudItem } from "@/lib/supabase/data";
-import type { BudgetSectionKey, BudgetState, BudgetStatus, SavedBudget, SimpleBudgetData } from "@/lib/budget/types";
+import type {
+  BudgetLine,
+  BudgetSectionKey,
+  BudgetState,
+  BudgetStatus,
+  EssentialFuelData,
+  PremiumFuelData,
+  SavedBudget,
+  SimpleBudgetData,
+} from "@/lib/budget/types";
 import { BudgetSection, Field, NumberInput, SelectInput, TextArea, TextInput } from "./BudgetFields";
 import { BudgetSummary } from "./BudgetSummary";
 import { DrePanel, FinancialFlow, ProvisionAndPayment } from "./FinancialPanels";
@@ -24,7 +33,6 @@ import { ProjectLinkField } from "@/components/projects/ProjectLinkField";
 import { normalizeProjects, projectsStorageKey } from "@/lib/projects/storage";
 import type { StudioProject } from "@/lib/projects/types";
 import { ToolHeader } from "@/components/ui/ToolHeader";
-import { PremiumPreviewDialog } from "@/components/PremiumPreviewDialog";
 import { trackUsageEvent } from "@/lib/analytics/usage";
 
 export function BudgetCalculator() {
@@ -38,7 +46,6 @@ export function BudgetCalculator() {
   const [saveStatus, setSaveStatus] = useState("Rascunho salvo localmente");
   const [storageLabel, setStorageLabel] = useState("Modo local");
   const [mode, setMode] = useState<"essential" | "professional">("essential");
-  const [premiumPreview, setPremiumPreview] = useState(false);
   const totals = useMemo(() => calculateBudget(budget), [budget]);
   const budgetRef = useRef(budget);
   const savedBudgetsRef = useRef(savedBudgets);
@@ -293,7 +300,7 @@ export function BudgetCalculator() {
               onClick={() => setActiveTab("saved")}
             />
           </div>
-          {activeTab === "create" && <div className="hide-scrollbar mt-3 flex w-full gap-1 overflow-x-auto rounded-2xl bg-white/[0.06] p-1 sm:w-fit"><ModeButton active={mode === "essential"} label="Essencial" onClick={() => setMode("essential")} /><ModeButton active={false} label="Profissional" premium onClick={() => setPremiumPreview(true)} /></div>}
+          {activeTab === "create" && <div className="hide-scrollbar mt-3 flex w-full gap-1 overflow-x-auto rounded-2xl bg-white/[0.06] p-1 sm:w-fit"><ModeButton active={mode === "essential"} label="Essencial" onClick={() => setMode("essential")} /><ModeButton active={mode === "professional"} label="Profissional" premium onClick={() => setMode("professional")} /></div>}
         </ToolHeader>
 
         {activeTab === "saved" ? (
@@ -317,6 +324,7 @@ export function BudgetCalculator() {
               <main className="order-2 space-y-5 xl:order-1">
                 <ClientCard budget={budget} updateBudget={updateBudget} />
                 <BriefingCard budget={budget} updateBudget={updateBudget} />
+                <PremiumFuelSection budget={budget} updateBudget={updateBudget} />
 
                 {sectionKeys.map((key) => {
                   const meta = sectionMeta[key as keyof typeof sectionMeta];
@@ -357,12 +365,6 @@ export function BudgetCalculator() {
           </>
         )}
       </div>
-      <PremiumPreviewDialog
-        open={premiumPreview}
-        title="Orçamento Profissional"
-        description="Custos avançados, DRE, provisionamento e análises detalhadas estarão disponíveis na experiência Premium."
-        onClose={() => setPremiumPreview(false)}
-      />
     </section>
   );
 }
@@ -376,7 +378,9 @@ function EssentialBudget({ budget, updateBudget, updateSetting }: { budget: Budg
   const totalHours = simple.preProductionHours + simple.filmingHours + simple.editingHours + simple.finishingHours;
   const hourlyCost = ["Por hora", "Misto"].includes(simple.chargeType) ? preProduction + filming + editing + finishing : 0;
   const dailyCost = ["Por diária", "Misto"].includes(simple.chargeType) ? simple.dayCount * simple.dayRate : 0;
-  const base = hourlyCost + dailyCost + simple.equipment + simple.travel + simple.food + simple.otherCosts;
+  const fuel = calculateEssentialFuel(simple.fuelEssential);
+  const displacementCost = fuel.hasInput ? fuel.cost : simple.travel;
+  const base = hourlyCost + dailyCost + simple.equipment + displacementCost + simple.food + simple.otherCosts;
   const profit = base * (budget.settings.profitPercent / 100);
   const suggested = (base + profit) * (1 + budget.settings.taxPercent / 100);
 
@@ -385,7 +389,10 @@ function EssentialBudget({ budget, updateBudget, updateSetting }: { budget: Budg
       const next = { ...current.simple, ...patch };
       const usesHours = ["Por hora", "Misto"].includes(next.chargeType);
       const usesDays = ["Por diária", "Misto"].includes(next.chargeType);
-      const setFirst = (section: BudgetSectionKey, value: number) => current.sections[section].map((line, index) => index === 0 ? { ...line, unitValue: value, quantity: value ? 1 : 0 } : line);
+      const nextFuel = calculateEssentialFuel(next.fuelEssential);
+      const nextDisplacement = nextFuel.hasInput ? nextFuel.cost : next.travel;
+      const setFirst = (section: BudgetSectionKey, value: number) => setFirstLineValue(current.sections[section], value);
+
       return {
         ...current,
         simple: next,
@@ -395,7 +402,7 @@ function EssentialBudget({ budget, updateBudget, updateSetting }: { budget: Budg
           southProduction: setFirst("southProduction", (usesHours ? next.filmingHours * next.filmingHourlyRate : 0) + (usesDays ? next.dayCount * next.dayRate : 0)),
           postProduction: setFirst("postProduction", usesHours ? (next.editingHours * next.editingHourlyRate) + (next.finishingHours * next.finishingHourlyRate) : 0),
           equipment: setFirst("equipment", next.equipment),
-          travelCosts: setFirst("travelCosts", next.travel),
+          travelCosts: setFirst("travelCosts", nextDisplacement),
           teamCosts: setFirst("teamCosts", next.food),
           freelanceProduction: setFirst("freelanceProduction", next.otherCosts),
         },
@@ -433,12 +440,16 @@ function EssentialBudget({ budget, updateBudget, updateSetting }: { budget: Budg
               <Field label="Valor por diária"><NumberInput value={simple.dayRate} suffix="R$" onValueChange={(value) => changeSimple({ dayRate: value })} /></Field>
             </>}
             <Field label="Equipamentos"><NumberInput value={simple.equipment} suffix="R$" onValueChange={(value) => changeSimple({ equipment: value })} /></Field>
-            <Field label="Deslocamento"><NumberInput value={simple.travel} suffix="R$" onValueChange={(value) => changeSimple({ travel: value })} /></Field>
             <Field label="Alimentação"><NumberInput value={simple.food} suffix="R$" onValueChange={(value) => changeSimple({ food: value })} /></Field>
             <Field label="Outros custos"><NumberInput value={simple.otherCosts} suffix="R$" onValueChange={(value) => changeSimple({ otherCosts: value })} /></Field>
             <Field label="Margem %"><NumberInput value={budget.settings.profitPercent} onValueChange={(value) => updateSetting("profitPercent", value)} /></Field>
             <Field label="Imposto %"><NumberInput value={budget.settings.taxPercent} onValueChange={(value) => updateSetting("taxPercent", value)} /></Field>
           </div>
+
+          <EssentialFuelCard
+            fuel={simple.fuelEssential}
+            onChange={(fuelEssential) => changeSimple({ fuelEssential })}
+          />
         </section>
       </main>
 
@@ -453,12 +464,128 @@ function EssentialBudget({ budget, updateBudget, updateSetting }: { budget: Budg
             <SimpleResult label="Finalização" value={formatCurrency(finishing)} />
             <SimpleResult label="Total das etapas" value={formatCurrency(hourlyCost)} />
           </>}
+          <SimpleResult label="Deslocamento" value={formatCurrency(displacementCost)} />
           <SimpleResult label="Custo base" value={formatCurrency(base)} />
-          <SimpleResult label="Total de horas" value={`${totalHours}h`} />
+          <SimpleResult label="Total de horas" value={`${formatPlainNumber(totalHours)}h`} />
           <SimpleResult label="Lucro estimado" value={formatCurrency(profit)} />
         </div>
         <p className="mt-6 text-xs leading-5 text-zinc-500">Use esta sugestão como ponto de partida e ajuste conforme escopo, experiência e valor percebido.</p>
       </aside>
+    </div>
+  );
+}
+
+function EssentialFuelCard({ fuel, onChange }: { fuel: EssentialFuelData; onChange: (fuel: EssentialFuelData) => void }) {
+  const totals = calculateEssentialFuel(fuel);
+
+  function update(key: keyof EssentialFuelData, value: number) {
+    onChange({ ...fuel, [key]: value });
+  }
+
+  return (
+    <section className="mt-6 rounded-3xl border border-zinc-200 bg-zinc-50/80 p-4 sm:p-5">
+      <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-start">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-zinc-400">Combustível</p>
+          <h3 className="mt-2 text-lg font-semibold text-zinc-950">Custo de deslocamento</h3>
+          <p className="mt-1 text-sm leading-6 text-zinc-500">Calcule o custo de combustível e deslocamento da produção.</p>
+        </div>
+        <strong className="text-xl text-zinc-950">{formatCurrency(totals.cost)}</strong>
+      </div>
+      <div className="mt-5 grid gap-4 sm:grid-cols-3">
+        <Field label="Distância total em km"><NumberInput value={fuel.distanceKm} suffix="km" onValueChange={(value) => update("distanceKm", value)} /></Field>
+        <Field label="Média do veículo em km/L"><NumberInput value={fuel.kmPerLiter} suffix="km/L" onValueChange={(value) => update("kmPerLiter", value)} /></Field>
+        <Field label="Preço do combustível em R$/L"><NumberInput value={fuel.fuelPrice} suffix="R$" onValueChange={(value) => update("fuelPrice", value)} /></Field>
+      </div>
+      {totals.hasConsumptionError ? (
+        <p className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
+          Informe uma média maior que 0 km/L para calcular o combustível.
+        </p>
+      ) : (
+        <div className="mt-4 grid gap-3 rounded-2xl border border-white bg-white/80 p-4 text-sm sm:grid-cols-3">
+          <SimpleResult label="Litros estimados" value={`${formatPlainNumber(totals.liters)} L`} />
+          <SimpleResult label="Custo total" value={formatCurrency(totals.cost)} />
+          <SimpleResult
+            label="Fórmula usada"
+            value={`${formatPlainNumber(fuel.distanceKm)} km ÷ ${formatPlainNumber(fuel.kmPerLiter)} km/L = ${formatPlainNumber(totals.liters)} L`}
+          />
+        </div>
+      )}
+      {!totals.hasConsumptionError && (
+        <p className="mt-3 text-xs text-zinc-500">
+          {formatPlainNumber(totals.liters)} L × {formatCurrency(fuel.fuelPrice)} = {formatCurrency(totals.cost)}
+        </p>
+      )}
+    </section>
+  );
+}
+
+function PremiumFuelSection({ budget, updateBudget }: { budget: BudgetState; updateBudget: (updater: (current: BudgetState) => BudgetState) => void }) {
+  const fuel = budget.simple.fuelPremium;
+  const totals = calculatePremiumFuel(fuel);
+
+  function update(key: keyof PremiumFuelData, value: number | string) {
+    updateBudget((current) => {
+      const nextFuel = { ...current.simple.fuelPremium, [key]: value };
+      const nextTotals = calculatePremiumFuel(nextFuel);
+
+      return {
+        ...current,
+        simple: { ...current.simple, fuelPremium: nextFuel },
+        sections: {
+          ...current.sections,
+          travelCosts: setFirstLineValue(current.sections.travelCosts, nextTotals.totalGeneral),
+        },
+      };
+    });
+  }
+
+  return (
+    <BudgetSection
+      eyebrow="Logística"
+      title="Combustível e deslocamento"
+      description="Calcule o custo de combustível e deslocamento da produção."
+      total={formatCurrency(totals.totalGeneral)}
+    >
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <Field label="Ida"><NumberInput value={fuel.outboundKm} suffix="km" onValueChange={(value) => update("outboundKm", value)} /></Field>
+        <Field label="Volta"><NumberInput value={fuel.returnKm} suffix="km" onValueChange={(value) => update("returnKm", value)} /></Field>
+        <Field label="KM extra"><NumberInput value={fuel.extraKm} suffix="km" onValueChange={(value) => update("extraKm", value)} /></Field>
+        <Field label="Média do veículo"><NumberInput value={fuel.kmPerLiter} suffix="km/L" onValueChange={(value) => update("kmPerLiter", value)} /></Field>
+        <Field label="Preço combustível"><NumberInput value={fuel.fuelPrice} suffix="R$" onValueChange={(value) => update("fuelPrice", value)} /></Field>
+        <Field label="Pedágio"><NumberInput value={fuel.toll} suffix="R$" onValueChange={(value) => update("toll", value)} /></Field>
+        <Field label="Estacionamento"><NumberInput value={fuel.parking} suffix="R$" onValueChange={(value) => update("parking", value)} /></Field>
+        <Field label="Alimentação/deslocamento"><NumberInput value={fuel.foodAndTravel} suffix="R$" onValueChange={(value) => update("foodAndTravel", value)} /></Field>
+        <Field label="Número de carros"><NumberInput value={fuel.carCount} onValueChange={(value) => update("carCount", value)} /></Field>
+        <Field label="Número de pessoas/equipe"><NumberInput value={fuel.peopleCount} onValueChange={(value) => update("peopleCount", value)} /></Field>
+        <div className="sm:col-span-2">
+          <Field label="Observações">
+            <TextArea value={fuel.notes} onChange={(event) => update("notes", event.target.value)} />
+          </Field>
+        </div>
+      </div>
+
+      {totals.hasConsumptionError ? (
+        <p className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
+          Informe uma média maior que 0 km/L para calcular o combustível.
+        </p>
+      ) : (
+        <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <MetricBox label="Distância final" value={`${formatPlainNumber(totals.finalDistance)} km`} />
+          <MetricBox label="Combustível" value={formatCurrency(totals.fuelCost)} />
+          <MetricBox label="Total geral" value={formatCurrency(totals.totalGeneral)} />
+          <MetricBox label="Custo por pessoa" value={formatCurrency(totals.costPerPerson)} />
+        </div>
+      )}
+    </BudgetSection>
+  );
+}
+
+function MetricBox({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-zinc-200 bg-zinc-50/80 p-4">
+      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400">{label}</p>
+      <p className="mt-2 text-lg font-semibold text-zinc-950">{value}</p>
     </div>
   );
 }
@@ -480,6 +607,35 @@ function WorkRateCard({ title, hours, rate, total, onHours, onRate }: { title: s
 
 function SimpleResult({ label, value }: { label: string; value: string }) {
   return <div className="flex items-center justify-between gap-4 border-b border-zinc-100 pb-3"><span className="text-zinc-500">{label}</span><strong className="text-right text-zinc-900">{value}</strong></div>;
+}
+
+function calculateEssentialFuel(fuel: EssentialFuelData) {
+  const hasInput = fuel.distanceKm > 0 || fuel.kmPerLiter > 0 || fuel.fuelPrice > 0;
+  const hasConsumptionError = fuel.distanceKm > 0 && fuel.kmPerLiter <= 0;
+  const liters = fuel.kmPerLiter > 0 ? fuel.distanceKm / fuel.kmPerLiter : 0;
+  const cost = liters * fuel.fuelPrice;
+  return { hasInput, hasConsumptionError, liters, cost };
+}
+
+function calculatePremiumFuel(fuel: PremiumFuelData) {
+  const finalDistance = fuel.outboundKm + fuel.returnKm + fuel.extraKm;
+  const hasConsumptionError = finalDistance > 0 && fuel.kmPerLiter <= 0;
+  const liters = fuel.kmPerLiter > 0 ? finalDistance / fuel.kmPerLiter : 0;
+  const fuelCost = liters * fuel.fuelPrice;
+  const subtotal = fuelCost + fuel.toll + fuel.parking + fuel.foodAndTravel;
+  const totalGeneral = subtotal * fuel.carCount;
+  const costPerPerson = fuel.peopleCount > 0 ? totalGeneral / fuel.peopleCount : 0;
+  return { finalDistance, liters, fuelCost, subtotal, totalGeneral, costPerPerson, hasConsumptionError };
+}
+
+function setFirstLineValue(lines: BudgetLine[], value: number) {
+  return lines.map((line, index) => index === 0 ? { ...line, unitValue: value, quantity: value ? 1 : 0 } : line);
+}
+
+function formatPlainNumber(value: number) {
+  return new Intl.NumberFormat("pt-BR", {
+    maximumFractionDigits: 2,
+  }).format(Number.isFinite(value) ? value : 0);
 }
 
 function ModeButton({ active, label, premium = false, onClick }: { active: boolean; label: string; premium?: boolean; onClick: () => void }) {
@@ -601,6 +757,14 @@ function normalizeBudget(stored: Partial<BudgetState>): BudgetState {
       editingHourlyRate: safeNumber(stored.simple?.editingHourlyRate, legacyHourlyRate),
       finishingHours: safeNumber(stored.simple?.finishingHours),
       finishingHourlyRate: safeNumber(stored.simple?.finishingHourlyRate, legacyHourlyRate),
+      fuelEssential: {
+        ...defaults.simple.fuelEssential,
+        ...stored.simple?.fuelEssential,
+      },
+      fuelPremium: {
+        ...defaults.simple.fuelPremium,
+        ...stored.simple?.fuelPremium,
+      },
     },
   };
 }
