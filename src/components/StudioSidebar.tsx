@@ -70,7 +70,7 @@ export function StudioSidebar() {
 
   return (
     <>
-    <aside className="hidden rounded-[26px] border border-white/80 bg-white/60 p-3 shadow-[0_22px_70px_rgba(16,24,40,0.09)] backdrop-blur-2xl sm:rounded-[30px] lg:sticky lg:top-6 lg:grid lg:h-[calc(100dvh-3rem)] lg:grid-rows-[auto_minmax(0,1fr)_auto] lg:p-4">
+    <aside className="hidden min-h-0 rounded-[26px] border border-white/80 bg-white/60 p-3 shadow-[0_22px_70px_rgba(16,24,40,0.09)] backdrop-blur-2xl sm:rounded-[30px] lg:grid lg:h-full lg:grid-rows-[auto_minmax(0,1fr)_auto] lg:p-4">
       <Link href="/dashboard" className="flex min-h-16 items-center justify-center rounded-[18px] border border-white/70 bg-white/46 px-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.78),0_10px_30px_rgba(15,20,32,0.05)]">
         <BrandLogo tone="dark" className="w-[148px]" priority />
       </Link>

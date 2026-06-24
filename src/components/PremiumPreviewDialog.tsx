@@ -16,8 +16,8 @@ export function PremiumPreviewDialog({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[160] grid place-items-center bg-[#0b0e15]/42 p-4 backdrop-blur-md" role="dialog" aria-modal="true" aria-label={title}>
-      <section className="relative w-full max-w-md rounded-[26px] border border-white/80 bg-white/94 p-6 text-center shadow-[0_30px_100px_rgba(10,14,24,0.3)] backdrop-blur-2xl sm:p-8">
+    <div className="fixed inset-0 z-[160] grid place-items-center bg-[#0b0e15]/64 p-4 backdrop-blur-xl" role="dialog" aria-modal="true" aria-label={title}>
+      <section className="relative w-full max-w-md rounded-[26px] border border-white/80 bg-white/95 p-6 text-center shadow-[0_34px_110px_rgba(0,0,0,0.42)] backdrop-blur-2xl sm:p-8">
         <button type="button" onClick={onClose} aria-label="Fechar" className="absolute right-3 top-3 grid h-11 w-11 place-items-center rounded-full bg-zinc-100 text-zinc-600">
           <X size={18} />
         </button>

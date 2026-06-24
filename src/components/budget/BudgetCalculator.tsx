@@ -33,6 +33,7 @@ import { ProjectLinkField } from "@/components/projects/ProjectLinkField";
 import { normalizeProjects, projectsStorageKey } from "@/lib/projects/storage";
 import type { StudioProject } from "@/lib/projects/types";
 import { ToolHeader } from "@/components/ui/ToolHeader";
+import { PremiumPreviewDialog } from "@/components/PremiumPreviewDialog";
 import { trackUsageEvent } from "@/lib/analytics/usage";
 
 export function BudgetCalculator() {
@@ -46,6 +47,7 @@ export function BudgetCalculator() {
   const [saveStatus, setSaveStatus] = useState("Rascunho salvo localmente");
   const [storageLabel, setStorageLabel] = useState("Modo local");
   const [mode, setMode] = useState<"essential" | "professional">("essential");
+  const [premiumPreview, setPremiumPreview] = useState(false);
   const totals = useMemo(() => calculateBudget(budget), [budget]);
   const budgetRef = useRef(budget);
   const savedBudgetsRef = useRef(savedBudgets);
@@ -300,7 +302,7 @@ export function BudgetCalculator() {
               onClick={() => setActiveTab("saved")}
             />
           </div>
-          {activeTab === "create" && <div className="hide-scrollbar mt-3 flex w-full gap-1 overflow-x-auto rounded-2xl bg-white/[0.06] p-1 sm:w-fit"><ModeButton active={mode === "essential"} label="Essencial" onClick={() => setMode("essential")} /><ModeButton active={mode === "professional"} label="Profissional" premium onClick={() => setMode("professional")} /></div>}
+          {activeTab === "create" && <div className="hide-scrollbar mt-3 flex w-full gap-1 overflow-x-auto rounded-2xl bg-white/[0.06] p-1 sm:w-fit"><ModeButton active={mode === "essential"} label="Essencial" onClick={() => setMode("essential")} /><ModeButton active={false} label="Profissional" premium onClick={() => setPremiumPreview(true)} /></div>}
         </ToolHeader>
 
         {activeTab === "saved" ? (
@@ -365,6 +367,12 @@ export function BudgetCalculator() {
           </>
         )}
       </div>
+      <PremiumPreviewDialog
+        open={premiumPreview}
+        title="Orçamento Profissional"
+        description="Custos avançados, deslocamento premium, DRE, provisionamento e análises detalhadas estarão disponíveis na experiência Premium."
+        onClose={() => setPremiumPreview(false)}
+      />
     </section>
   );
 }
