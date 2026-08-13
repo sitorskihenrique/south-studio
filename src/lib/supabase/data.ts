@@ -34,6 +34,9 @@ export type CloudWriteResult = {
 };
 
 export const cloudSyncEvent = "south-studio-cloud-sync";
+const MAX_CLOUD_ITEM_BYTES = 256 * 1024;
+const MAX_CLOUD_TITLE_LENGTH = 180;
+const MAX_CLOUD_ID_LENGTH = 128;
 
 export type CloudSyncSnapshot = {
   pending: number;
@@ -168,6 +171,9 @@ export async function upsertCloudItem<T extends { id: string }>(
   const user = await getCurrentUser();
   if (!user) return { authenticated: false, ok: false, error: "Usuario nao autenticado." };
 
+  const validation = validateCloudWrite(item, title);
+  if (!validation.ok) return { authenticated: true, ok: false, error: validation.error };
+
   const queued = enqueueCloudOperation(user.id, { table, type: "upsert", id: item.id, item, title });
   notifyCloudSync(user.id);
   if (!queued) {
@@ -205,6 +211,10 @@ export async function replaceCloudItems<T extends { id: string }>(
   }
   const user = await getCurrentUser();
   if (!user) return { authenticated: false, ok: false, error: "Usuario nao autenticado." };
+  for (const item of items) {
+    const validation = validateCloudWrite(item, titleForItem(item));
+    if (!validation.ok) return { authenticated: true, ok: false, error: validation.error };
+  }
   const queuedResults = items.map((item) => enqueueCloudOperation(user.id, {
     table,
     type: "upsert",
@@ -234,6 +244,7 @@ export async function deleteCloudItem(table: CloudTable, id: string): Promise<Cl
 
   const user = await getCurrentUser();
   if (!user) return { authenticated: false, ok: false, error: "Usuario nao autenticado." };
+  if (!isValidCloudId(id)) return { authenticated: true, ok: false, error: "Identificador invalido." };
 
   const queued = enqueueCloudOperation(user.id, { table, type: "delete", id });
   notifyCloudSync(user.id);
@@ -306,6 +317,9 @@ async function sendUpsertOperation(
   userId: string,
   operation: ReturnType<typeof readCloudOutbox>[number],
 ) {
+  const validation = validateCloudWrite(operation.item, operation.title);
+  if (!validation.ok) return { data: null, error: { message: validation.error } };
+  if (!operation.item) return { data: null, error: { message: "Item invalido." } };
   const baseRow = {
     id: operation.id,
     user_id: userId,
@@ -327,6 +341,24 @@ async function sendUpsertOperation(
     Promise.resolve(supabase.from(operation.table).upsert(baseRow, { onConflict: "id,user_id" })),
     8_000,
   );
+}
+
+function validateCloudWrite(item: unknown, title?: string): { ok: true } | { ok: false; error: string } {
+  if (!item || typeof item !== "object") return { ok: false, error: "Item invalido." };
+  const id = (item as { id?: unknown }).id;
+  if (typeof id !== "string" || !isValidCloudId(id)) return { ok: false, error: "Identificador invalido." };
+  if (title && title.length > MAX_CLOUD_TITLE_LENGTH) return { ok: false, error: "Titulo muito longo." };
+  try {
+    const size = new Blob([JSON.stringify(item)]).size;
+    if (size > MAX_CLOUD_ITEM_BYTES) return { ok: false, error: "Item muito grande para sincronizar." };
+  } catch {
+    return { ok: false, error: "Item invalido para sincronizacao." };
+  }
+  return { ok: true };
+}
+
+function isValidCloudId(id: string) {
+  return id.length > 0 && id.length <= MAX_CLOUD_ID_LENGTH && !/[\u0000-\u001f\u007f]/.test(id);
 }
 
 function isMissingProjectIdError(message: string) {

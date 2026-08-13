@@ -43,8 +43,8 @@ async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T
   }
 }
 
-export async function updateSession(request: NextRequest) {
-  let response = NextResponse.next({ request });
+export async function updateSession(request: NextRequest, requestHeaders = request.headers) {
+  let response = NextResponse.next({ request: { headers: requestHeaders } });
   const pathname = request.nextUrl.pathname;
   const isProtected = matches(pathname, protectedRoutes);
   const isAuth = matches(pathname, authRoutes);
@@ -69,7 +69,7 @@ export async function updateSession(request: NextRequest) {
       },
       setAll(cookiesToSet) {
         cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-        response = NextResponse.next({ request });
+        response = NextResponse.next({ request: { headers: requestHeaders } });
         cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
       },
     },

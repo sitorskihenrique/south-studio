@@ -11,3 +11,4 @@ yarn-error.log*
 pnpm-debug.log*
 south-studio-dev*.log
 .codex-previews
+supabase/.temp/

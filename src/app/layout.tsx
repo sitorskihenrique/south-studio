@@ -4,6 +4,8 @@ import { AuthSessionProvider } from "@/components/auth/AuthSessionProvider";
 import { brand } from "@/lib/brand";
 import "./globals.css";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: {
     default: brand.name,
