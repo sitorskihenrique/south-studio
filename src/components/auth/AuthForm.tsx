@@ -1,49 +1,24 @@
 "use client";
 
 import Link from "next/link";
-import Script from "next/script";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { setActiveStorageUser } from "@/lib/storage/scope";
 import { LocalizedBrandCopy } from "@/components/LocalizedBrandCopy";
 import { BrandLogo } from "@/components/ui/BrandLogo";
+import { isTurnstileConfigured, TurnstileChallenge, type TurnstileHandle } from "@/components/auth/TurnstileChallenge";
 
 type AuthMode = "login" | "cadastro";
 const AUTH_REQUEST_TIMEOUT_MS = 12_000;
-const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim() || "";
-const TURNSTILE_SCRIPT_SRC = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
-
-type TurnstileWidgetId = string;
-
-declare global {
-  interface Window {
-    turnstile?: {
-      render: (
-        container: HTMLElement,
-        options: {
-          sitekey: string;
-          theme?: "dark" | "light" | "auto";
-          callback?: (token: string) => void;
-          "expired-callback"?: () => void;
-          "error-callback"?: () => void;
-        },
-      ) => TurnstileWidgetId;
-      reset: (widgetId?: TurnstileWidgetId) => void;
-      remove: (widgetId: TurnstileWidgetId) => void;
-    };
-  }
-}
 
 export function AuthForm({ mode, nextPath = "/dashboard", missingConfig }: { mode: AuthMode; nextPath?: string; missingConfig?: boolean }) {
   const router = useRouter();
-  const captchaContainerRef = useRef<HTMLDivElement | null>(null);
-  const captchaWidgetIdRef = useRef<TurnstileWidgetId | null>(null);
+  const captchaHandleRef = useRef<TurnstileHandle | null>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [captchaReady, setCaptchaReady] = useState(false);
   const [captchaToken, setCaptchaToken] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -52,37 +27,18 @@ export function AuthForm({ mode, nextPath = "/dashboard", missingConfig }: { mod
   const isLogin = mode === "login";
   const alternateHref = `${isLogin ? "/cadastro" : "/login"}?next=${encodeURIComponent(nextPath)}`;
 
-  useEffect(() => {
-    if (!captchaReady || !TURNSTILE_SITE_KEY || !captchaContainerRef.current || captchaWidgetIdRef.current || !window.turnstile) return;
+  const handleCaptchaToken = useCallback((token: string) => {
+    setCaptchaToken(token);
+    setError((current) => (current === "Confirme que voce nao e um robo para continuar." ? "" : current));
+  }, []);
 
-    captchaWidgetIdRef.current = window.turnstile.render(captchaContainerRef.current, {
-      sitekey: TURNSTILE_SITE_KEY,
-      theme: "dark",
-      callback: (token) => {
-        setCaptchaToken(token);
-        setError((current) => (current === "Confirme que voce nao e um robo para continuar." ? "" : current));
-      },
-      "expired-callback": () => {
-        setCaptchaToken("");
-        setError("O CAPTCHA expirou. Confirme novamente para continuar.");
-      },
-      "error-callback": () => {
-        setCaptchaToken("");
-        setError("Nao foi possivel validar o CAPTCHA. Tente novamente.");
-      },
-    });
-
-    return () => {
-      if (captchaWidgetIdRef.current && window.turnstile) {
-        window.turnstile.remove(captchaWidgetIdRef.current);
-        captchaWidgetIdRef.current = null;
-      }
-    };
-  }, [captchaReady]);
+  const handleCaptchaError = useCallback((message: string) => {
+    setCaptchaToken("");
+    setError(message);
+  }, []);
 
   function resetCaptcha() {
-    setCaptchaToken("");
-    if (captchaWidgetIdRef.current && window.turnstile) window.turnstile.reset(captchaWidgetIdRef.current);
+    captchaHandleRef.current?.reset();
   }
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
@@ -92,9 +48,9 @@ export function AuthForm({ mode, nextPath = "/dashboard", missingConfig }: { mod
 
     if (!isSupabaseConfigured()) return setError("Acesso indisponível neste ambiente.");
     if (!validateEmail(email)) return setError("Digite um e-mail válido.");
-    if (password.length < 6) return setError("A senha precisa ter pelo menos 6 caracteres.");
+    if (password.length < 8) return setError("A senha precisa ter pelo menos 8 caracteres.");
     if (!isLogin && name.trim().length < 2) return setError("Digite seu nome para criar a conta.");
-    if (!TURNSTILE_SITE_KEY) return setError("CAPTCHA indisponivel. Configure a chave publica do Turnstile.");
+    if (!isTurnstileConfigured()) return setError("CAPTCHA indisponivel. Configure a chave publica do Turnstile.");
     if (!captchaToken) return setError("Confirme que voce nao e um robo para continuar.");
 
     const supabase = createClient();
@@ -176,8 +132,6 @@ export function AuthForm({ mode, nextPath = "/dashboard", missingConfig }: { mod
         </section>
 
         <section className="m-2 flex flex-col rounded-[22px] border border-white/12 bg-black/56 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-2xl sm:m-4 sm:p-8 lg:m-5 lg:p-9">
-          {TURNSTILE_SITE_KEY && <Script src={TURNSTILE_SCRIPT_SRC} strategy="afterInteractive" onLoad={() => setCaptchaReady(true)} onError={() => setError("Nao foi possivel carregar o CAPTCHA. Tente novamente.")} />}
-
           <div className="flex items-center justify-between gap-4 lg:justify-end">
             <Link href="/" className="lg:hidden"><BrandLogo className="w-[132px]" priority /></Link>
             <nav className="flex gap-1 rounded-full border border-white/16 bg-black/35 p-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.28)]">
@@ -200,15 +154,9 @@ export function AuthForm({ mode, nextPath = "/dashboard", missingConfig }: { mod
             <form onSubmit={submit} className="space-y-4">
               {!isLogin && <AuthField label="Nome" value={name} onChange={setName} autoComplete="name" placeholder="Seu nome" />}
               <AuthField label="E-mail" type="email" value={email} onChange={setEmail} autoComplete="email" placeholder="voce@email.com" />
-              <AuthField label="Senha" type="password" value={password} onChange={setPassword} autoComplete={isLogin ? "current-password" : "new-password"} placeholder="Mínimo 6 caracteres" />
+              <AuthField label="Senha" type="password" value={password} onChange={setPassword} autoComplete={isLogin ? "current-password" : "new-password"} placeholder="Mínimo 8 caracteres" />
 
-              <div className="min-h-[65px] overflow-hidden rounded-xl border border-white/10 bg-black/20 px-3 py-2">
-                {TURNSTILE_SITE_KEY ? (
-                  <div ref={captchaContainerRef} className="flex min-h-[45px] items-center justify-center" />
-                ) : (
-                  <p className="flex min-h-[45px] items-center justify-center text-center text-sm font-medium text-amber-100/85">Configure a chave publica do Turnstile para liberar o acesso por e-mail.</p>
-                )}
-              </div>
+              <TurnstileChallenge action={isLogin ? "login" : "signup"} onToken={handleCaptchaToken} onError={handleCaptchaError} handleRef={captchaHandleRef} />
 
               {error && <p className="rounded-xl border border-red-400/20 bg-red-400/10 px-4 py-3 text-sm font-medium text-red-200">{error}</p>}
               {message && <p className="rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-sm font-medium text-emerald-200">{message}</p>}
@@ -222,6 +170,13 @@ export function AuthForm({ mode, nextPath = "/dashboard", missingConfig }: { mod
               {isLogin ? "Ainda não tem conta?" : "Já tem conta?"}{" "}
               <Link href={alternateHref} className="font-semibold text-white">{isLogin ? "Cadastrar" : "Login"}</Link>
             </p>
+            {isLogin && (
+              <p className="mt-3 text-center text-sm">
+                <Link href="/recuperar-senha" className="font-semibold text-white/70 transition hover:text-white">
+                  Esqueci minha senha
+                </Link>
+              </p>
+            )}
           </div>
         </section>
       </div>
