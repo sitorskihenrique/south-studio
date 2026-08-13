@@ -34,7 +34,6 @@ import { normalizeProjects, projectsStorageKey } from "@/lib/projects/storage";
 import type { StudioProject } from "@/lib/projects/types";
 import { ToolHeader } from "@/components/ui/ToolHeader";
 import { PremiumPreviewDialog } from "@/components/PremiumPreviewDialog";
-import { trackUsageEvent } from "@/lib/analytics/usage";
 
 export function BudgetCalculator() {
   const searchParams = useSearchParams();
@@ -218,7 +217,6 @@ export function BudgetCalculator() {
     if (cloud.authenticated) setStorageLabel(cloud.ok ? "Sincronizado na conta" : "Salvo neste dispositivo");
     setDirty(false);
     setSaveStatus(cloud.authenticated && cloud.ok ? "Orçamento salvo na sua conta." : "Orçamento salvo localmente.");
-    if (cloud.authenticated && (cloud.ok || cloud.queued)) void trackUsageEvent("budget_saved", "budgets");
   }
 
   async function saveAsNew(source = budget) {

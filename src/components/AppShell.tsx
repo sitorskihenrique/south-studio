@@ -1,20 +1,11 @@
 "use client";
 
-import { Suspense, useEffect } from "react";
-import { usePathname } from "next/navigation";
+import { Suspense } from "react";
 import { StudioSidebar } from "@/components/StudioSidebar";
 import { useAuthSession } from "@/components/auth/AuthSessionProvider";
-import { trackUsageEvent, type UsageTool } from "@/lib/analytics/usage";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { ready, error, retry } = useAuthSession();
-  const pathname = usePathname();
-
-  useEffect(() => {
-    if (!ready || error) return;
-    const tool = toolForPath(pathname);
-    if (tool) void trackUsageEvent("tool_opened", tool);
-  }, [error, pathname, ready]);
 
   return (
     <div className="studio-app h-[100dvh] overflow-hidden bg-[#eceef2] pb-[calc(5.5rem+env(safe-area-inset-bottom))] text-zinc-950 lg:pb-0">
@@ -28,16 +19,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </div>
     </div>
   );
-}
-
-function toolForPath(pathname: string): UsageTool | null {
-  if (pathname === "/dashboard" || pathname === "/app") return "dashboard";
-  if (pathname === "/projetos") return "projects";
-  if (pathname === "/tarefas") return "tasks";
-  if (pathname === "/calculadora") return "budgets";
-  if (pathname === "/plano-de-filmagem" || pathname === "/ordem-do-dia") return "film_plans";
-  if (pathname === "/configuracoes") return "settings";
-  return null;
 }
 
 function AppError({ message, onRetry }: { message: string; onRetry: () => void }) {
