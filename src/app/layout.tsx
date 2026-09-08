@@ -42,6 +42,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" data-scroll-behavior="smooth">
+      <head>
+        <link rel="preconnect" href="https://challenges.cloudflare.com" />
+      </head>
       <body>
         <AuthSessionProvider>{children}</AuthSessionProvider>
         <ServiceWorkerRegistrar />

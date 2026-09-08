@@ -1,4 +1,4 @@
-const CACHE_NAME = "cologne-os-assets-v3";
+const CACHE_NAME = "cologne-os-assets-v4";
 const PUBLIC_ASSETS = [
   "/manifest.json",
   "/icons/icon-192.png",
@@ -29,11 +29,11 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
 
   if (request.method !== "GET" || url.origin !== self.location.origin) return;
+  if (["localhost", "127.0.0.1"].includes(url.hostname)) return;
   if (request.mode === "navigate") return;
   if (url.pathname.startsWith("/auth/") || url.pathname.startsWith("/login") || url.pathname.startsWith("/cadastro")) return;
 
   const isStaticAsset =
-    url.pathname.startsWith("/_next/static/") ||
     url.pathname.startsWith("/icons/") ||
     url.pathname === "/manifest.json";
 

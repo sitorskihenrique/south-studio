@@ -32,6 +32,7 @@ function generateNonce() {
 
 function buildContentSecurityPolicy(nonce: string) {
   const supabaseOrigin = getSupabaseOrigin();
+  const devScriptSource = process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : "";
   return [
     "default-src 'self'",
     "base-uri 'self'",
@@ -41,9 +42,9 @@ function buildContentSecurityPolicy(nonce: string) {
     "img-src 'self' data: blob:",
     "font-src 'self' data:",
     "style-src 'self' 'unsafe-inline'",
-    `script-src 'self' 'nonce-${nonce}' https://challenges.cloudflare.com`,
+    `script-src 'self' 'nonce-${nonce}'${devScriptSource} https://challenges.cloudflare.com`,
     "frame-src https://challenges.cloudflare.com",
-    `connect-src 'self'${supabaseOrigin ? ` ${supabaseOrigin} ${supabaseOrigin.replace("https://", "wss://")}` : ""}`,
+    `connect-src 'self' https://challenges.cloudflare.com${supabaseOrigin ? ` ${supabaseOrigin} ${supabaseOrigin.replace("https://", "wss://")}` : ""}`,
     "worker-src 'self' blob:",
     "manifest-src 'self'",
   ].join("; ");
