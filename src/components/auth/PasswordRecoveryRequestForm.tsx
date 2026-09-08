@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { getSupabaseConnectionErrorMessage, getSupabaseErrorText } from "@/lib/supabase/errors";
 import { BrandLogo } from "@/components/ui/BrandLogo";
 import { isTurnstileConfigured, TurnstileChallenge, type TurnstileHandle } from "@/components/auth/TurnstileChallenge";
 
@@ -45,21 +46,27 @@ export function PasswordRecoveryRequestForm() {
     const supabase = createClient();
     if (!supabase) return setError("Não foi possível iniciar a recuperação.");
 
-    setLoading(true);
-    const result = await withTimeout(
-      supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent("/redefinir-senha")}`,
-        captchaToken,
-      }),
-      AUTH_REQUEST_TIMEOUT_MS,
-    );
-    setLoading(false);
-    resetCaptcha();
+    try {
+      setLoading(true);
+      const result = await withTimeout(
+        supabase.auth.resetPasswordForEmail(email.trim(), {
+          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent("/redefinir-senha")}`,
+          captchaToken,
+        }),
+        AUTH_REQUEST_TIMEOUT_MS,
+      );
+      setLoading(false);
+      resetCaptcha();
 
-    if (!result) return setError("A conexão demorou mais que o esperado. Tente novamente.");
-    if (result.error) return setError(getFriendlyResetRequestError(result.error));
+      if (!result) return setError("A conexão demorou mais que o esperado. Tente novamente.");
+      if (result.error) return setError(getFriendlyResetRequestError(result.error));
 
-    setMessage(SUCCESS_MESSAGE);
+      setMessage(SUCCESS_MESSAGE);
+    } catch (resetError) {
+      setLoading(false);
+      resetCaptcha();
+      setError(getFriendlyResetRequestError(resetError));
+    }
   }
 
   return (
@@ -117,8 +124,10 @@ async function withTimeout<T>(promise: PromiseLike<T>, timeoutMs: number): Promi
   }
 }
 
-function getFriendlyResetRequestError(error: { code?: string; message?: string }) {
-  const normalized = `${error.code || ""} ${error.message || ""}`.toLowerCase();
+function getFriendlyResetRequestError(error: unknown) {
+  const connectionError = getSupabaseConnectionErrorMessage(error, "");
+  if (connectionError) return connectionError;
+  const normalized = getSupabaseErrorText(error).toLowerCase();
   if (normalized.includes("captcha")) return "Não foi possível validar a proteção contra abuso. Tente novamente.";
   if (normalized.includes("rate") || normalized.includes("too many")) return "Muitas tentativas em pouco tempo. Aguarde um pouco e tente novamente.";
   return SUCCESS_MESSAGE;

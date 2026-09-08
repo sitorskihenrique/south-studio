@@ -9,6 +9,7 @@ import {
   readCloudOutbox,
   type CloudTableName,
 } from "./outbox";
+import { getSupabaseConnectionErrorMessage } from "@/lib/supabase/errors";
 
 export type CloudTable = CloudTableName;
 
@@ -129,7 +130,7 @@ export async function readCloudItems<T extends { id: string }>(
         authenticated: true,
         ok: false,
         items: applyCloudOutbox(user.id, table, []),
-        error: error.message,
+        error: getSupabaseConnectionErrorMessage(error, error.message),
       };
     }
     const cloudItems = ((data || []) as CloudRow<{ id: string }>[]).map((row) => row.data);
@@ -143,7 +144,7 @@ export async function readCloudItems<T extends { id: string }>(
       authenticated: true,
       ok: false,
       items: applyCloudOutbox(user.id, table, []),
-      error: error instanceof Error ? error.message : "Falha ao carregar dados.",
+      error: getSupabaseConnectionErrorMessage(error, "Falha ao carregar dados."),
     };
   });
   itemsRequests.set(table, request);

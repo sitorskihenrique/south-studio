@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { getSupabaseConnectionErrorMessage, getSupabaseErrorText } from "@/lib/supabase/errors";
 import { setActiveStorageUser } from "@/lib/storage/scope";
 import { LocalizedBrandCopy } from "@/components/LocalizedBrandCopy";
 import { BrandLogo } from "@/components/ui/BrandLogo";
@@ -57,43 +58,49 @@ export function AuthForm({ mode, nextPath = "/dashboard", missingConfig }: { mod
     if (!supabase) return setError("Não foi possível iniciar o acesso.");
 
     setLoading(true);
-    if (isLogin) {
+    try {
+      if (isLogin) {
+        const result = await withTimeout(
+          supabase.auth.signInWithPassword({ email: email.trim(), password, options: { captchaToken } }),
+          AUTH_REQUEST_TIMEOUT_MS,
+        );
+        setLoading(false);
+        resetCaptcha();
+        if (!result) return setError("A conexão demorou mais que o esperado. Tente novamente.");
+        const { data, error: authError } = result;
+        if (authError) return setError(getFriendlyAuthError(authError, "login"));
+        setActiveStorageUser(data.user.id);
+        router.push(nextPath);
+        router.refresh();
+        return;
+      }
+
+      const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`;
       const result = await withTimeout(
-        supabase.auth.signInWithPassword({ email: email.trim(), password, options: { captchaToken } }),
+        supabase.auth.signUp({
+          email: email.trim(),
+          password,
+          options: { emailRedirectTo: redirectTo, data: { full_name: name.trim() }, captchaToken },
+        }),
         AUTH_REQUEST_TIMEOUT_MS,
       );
       setLoading(false);
       resetCaptcha();
       if (!result) return setError("A conexão demorou mais que o esperado. Tente novamente.");
       const { data, error: authError } = result;
-      if (authError) return setError(getFriendlyAuthError(authError, "login"));
-      setActiveStorageUser(data.user.id);
-      router.push(nextPath);
-      router.refresh();
-      return;
+      if (authError) return setError(getFriendlyAuthError(authError, "signup"));
+      if (data.session) {
+        setActiveStorageUser(data.user?.id || null);
+        router.push(nextPath);
+        router.refresh();
+        return;
+      }
+      setMessage("Conta criada. Confira seu e-mail para confirmar o acesso.");
+    } catch (authError) {
+      setLoading(false);
+      resetCaptcha();
+      setError(getFriendlyAuthError(authError, isLogin ? "login" : "signup"));
     }
-
-    const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`;
-    const result = await withTimeout(
-      supabase.auth.signUp({
-        email: email.trim(),
-        password,
-        options: { emailRedirectTo: redirectTo, data: { full_name: name.trim() }, captchaToken },
-      }),
-      AUTH_REQUEST_TIMEOUT_MS,
-    );
-    setLoading(false);
-    resetCaptcha();
-    if (!result) return setError("A conexão demorou mais que o esperado. Tente novamente.");
-    const { data, error: authError } = result;
-    if (authError) return setError(getFriendlyAuthError(authError, "signup"));
-    if (data.session) {
-      setActiveStorageUser(data.user?.id || null);
-      router.push(nextPath);
-      router.refresh();
-      return;
-    }
-    setMessage("Conta criada. Confira seu e-mail para confirmar o acesso.");
   }
 
   async function signInWithGoogle() {
@@ -104,18 +111,23 @@ export function AuthForm({ mode, nextPath = "/dashboard", missingConfig }: { mod
     const supabase = createClient();
     if (!supabase) return setError("Não foi possível iniciar o acesso.");
 
-    setLoading(true);
-    const result = await withTimeout(
-      supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: { redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}` },
-      }),
-      AUTH_REQUEST_TIMEOUT_MS,
-    );
-    setLoading(false);
-    if (!result) return setError("A conexão demorou mais que o esperado. Tente novamente.");
-    const { error: authError } = result;
-    if (authError) setError("Não foi possível iniciar o login com Google.");
+    try {
+      setLoading(true);
+      const result = await withTimeout(
+        supabase.auth.signInWithOAuth({
+          provider: "google",
+          options: { redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}` },
+        }),
+        AUTH_REQUEST_TIMEOUT_MS,
+      );
+      setLoading(false);
+      if (!result) return setError("A conexão demorou mais que o esperado. Tente novamente.");
+      const { error: authError } = result;
+      if (authError) setError("Não foi possível iniciar o login com Google.");
+    } catch (authError) {
+      setLoading(false);
+      setError(getSupabaseConnectionErrorMessage(authError, "Não foi possível iniciar o login com Google."));
+    }
   }
 
   return (
@@ -211,9 +223,11 @@ async function withTimeout<T>(promise: PromiseLike<T>, timeoutMs: number): Promi
   }
 }
 
-function getFriendlyAuthError(error: { code?: string; message?: string }, flow: "login" | "signup") {
-  const normalized = `${error.code || ""} ${error.message || ""}`.toLowerCase();
+function getFriendlyAuthError(error: unknown, flow: "login" | "signup") {
+  const normalized = getSupabaseErrorText(error).toLowerCase();
+  const connectionError = getSupabaseConnectionErrorMessage(error, "");
+  if (connectionError) return connectionError;
   if (normalized.includes("captcha")) return "Nao foi possivel validar o CAPTCHA. Confirme novamente e tente de novo.";
   if (flow === "login") return "E-mail ou senha invalidos.";
-  return error.message || "Nao foi possivel criar a conta. Tente novamente.";
+  return getSupabaseErrorText(error) || "Nao foi possivel criar a conta. Tente novamente.";
 }

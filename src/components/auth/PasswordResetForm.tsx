@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { getSupabaseConnectionErrorMessage, getSupabaseErrorText } from "@/lib/supabase/errors";
 import { BrandLogo } from "@/components/ui/BrandLogo";
 
 const AUTH_REQUEST_TIMEOUT_MS = 12_000;
@@ -31,10 +32,17 @@ export function PasswordResetForm() {
     let active = true;
 
     async function loadSession() {
-      const result = await withTimeout(client.auth.getSession(), AUTH_REQUEST_TIMEOUT_MS);
-      if (!active) return;
-      setHasSession(Boolean(result?.data.session));
-      setSessionReady(true);
+      try {
+        const result = await withTimeout(client.auth.getSession(), AUTH_REQUEST_TIMEOUT_MS);
+        if (!active) return;
+        setHasSession(Boolean(result?.data.session));
+        setSessionReady(true);
+      } catch (sessionError) {
+        if (!active) return;
+        setError(getSupabaseConnectionErrorMessage(sessionError, "Não foi possível validar o link de recuperação."));
+        setHasSession(false);
+        setSessionReady(true);
+      }
     }
 
     void loadSession();
@@ -65,17 +73,22 @@ export function PasswordResetForm() {
     const supabase = createClient();
     if (!supabase) return setError("Não foi possível redefinir sua senha.");
 
-    setLoading(true);
-    const result = await withTimeout(supabase.auth.updateUser({ password }), AUTH_REQUEST_TIMEOUT_MS);
-    setLoading(false);
+    try {
+      setLoading(true);
+      const result = await withTimeout(supabase.auth.updateUser({ password }), AUTH_REQUEST_TIMEOUT_MS);
+      setLoading(false);
 
-    if (!result) return setError("A conexão demorou mais que o esperado. Tente novamente.");
-    if (result.error) return setError(getFriendlyUpdateError(result.error));
+      if (!result) return setError("A conexão demorou mais que o esperado. Tente novamente.");
+      if (result.error) return setError(getFriendlyUpdateError(result.error));
 
-    setPassword("");
-    setConfirmPassword("");
-    setMessage("Senha atualizada com sucesso. Você já pode entrar com a nova senha.");
-    setTimeout(() => router.push("/login"), 1800);
+      setPassword("");
+      setConfirmPassword("");
+      setMessage("Senha atualizada com sucesso. Você já pode entrar com a nova senha.");
+      setTimeout(() => router.push("/login"), 1800);
+    } catch (updateError) {
+      setLoading(false);
+      setError(getFriendlyUpdateError(updateError));
+    }
   }
 
   return (
@@ -142,8 +155,10 @@ async function withTimeout<T>(promise: PromiseLike<T>, timeoutMs: number): Promi
   }
 }
 
-function getFriendlyUpdateError(error: { code?: string; message?: string }) {
-  const normalized = `${error.code || ""} ${error.message || ""}`.toLowerCase();
+function getFriendlyUpdateError(error: unknown) {
+  const connectionError = getSupabaseConnectionErrorMessage(error, "");
+  if (connectionError) return connectionError;
+  const normalized = getSupabaseErrorText(error).toLowerCase();
   if (normalized.includes("session")) return "Sua sessão de recuperação expirou. Solicite um novo link.";
   if (normalized.includes("password")) return "A nova senha não atende aos requisitos de segurança.";
   return "Não foi possível atualizar sua senha. Tente novamente.";
