@@ -1,6 +1,8 @@
 import type { NextRequest } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 
+const LINKED_SUPABASE_ORIGIN = "https://irpczrrlzmrtimpbkhge.supabase.co";
+
 export async function middleware(request: NextRequest) {
   const nonce = generateNonce();
   const requestHeaders = new Headers(request.headers);
@@ -32,6 +34,11 @@ function generateNonce() {
 
 function buildContentSecurityPolicy(nonce: string) {
   const supabaseOrigin = getSupabaseOrigin();
+  const supabaseConnectOrigins = new Set([LINKED_SUPABASE_ORIGIN]);
+  if (supabaseOrigin) {
+    supabaseConnectOrigins.add(supabaseOrigin);
+    supabaseConnectOrigins.add(supabaseOrigin.replace("https://", "wss://"));
+  }
   const devScriptSource = process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : "";
   return [
     "default-src 'self'",
@@ -44,7 +51,7 @@ function buildContentSecurityPolicy(nonce: string) {
     "style-src 'self' 'unsafe-inline'",
     `script-src 'self' 'nonce-${nonce}'${devScriptSource} https://challenges.cloudflare.com`,
     "frame-src https://challenges.cloudflare.com",
-    `connect-src 'self' https://challenges.cloudflare.com${supabaseOrigin ? ` ${supabaseOrigin} ${supabaseOrigin.replace("https://", "wss://")}` : ""}`,
+    `connect-src 'self' https://challenges.cloudflare.com ${Array.from(supabaseConnectOrigins).join(" ")}`,
     "worker-src 'self' blob:",
     "manifest-src 'self'",
   ].join("; ");
